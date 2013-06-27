@@ -1,9 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace QCDMWrapper
 {
@@ -11,9 +8,9 @@ namespace QCDMWrapper
     {
         private readonly SqlConnection con = new SqlConnection("user id=dmsreader;" + "password=dms4fun;" + "server=130.20.225.2;" + "Trusted_Connection=yes;" + "database=DMS5;" + "connection timeout=30");
 
+        //Connection to Database
         public bool Open()
         {
-            //Connection to Database//
             try
             {
                 con.Open();
@@ -26,9 +23,9 @@ namespace QCDMWrapper
             }
         }
 
+        //Closes Database
         public bool Close()
         {
-            //Connection to Database//
             try
             {
                 con.Close();
@@ -41,6 +38,7 @@ namespace QCDMWrapper
             }
         }
 
+        //Retrieves Data from database on the datasets Ids that were given by user
         public List<List<string>> GetData(int size, List<string> list)
         {
             var values = new List<List<string>>();
@@ -60,7 +58,7 @@ namespace QCDMWrapper
                     var read = command.ExecuteReader();
                     if (read.HasRows == false)
                     {
-                        Console.WriteLine(dataId + " is a LC-Agilent-2D-Formic seperation type");
+                        Console.WriteLine(dataId + " was not found with current SQL Command");
                         size--;
                     }
                     else

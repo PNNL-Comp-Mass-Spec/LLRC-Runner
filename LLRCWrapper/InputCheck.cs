@@ -7,11 +7,14 @@ namespace QCDMWrapper
 {
     class InputCheck
     {
-        public static string Fileloc = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location) + @"\";
         public static string Input;
+        public static int Size;
 
-        public void CmdInput(string[] args)
+        //Checks to see if there is a commmand line input and if in that input they specify a output folder to put data
+        public string CmdInput(string[] args)
         {
+
+            var fileloc = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location) + @"\";
             if (args.Length == 0)
             {
                 Console.WriteLine(
@@ -22,11 +25,11 @@ namespace QCDMWrapper
             {
                 if (args[0].Equals("-o") && args.Length > 1)
                 {
-                    Fileloc = args[1];
+                    fileloc = args[1];
                     Input = args[2];
-                    if (!Fileloc.EndsWith(@"/"))
+                    if (!fileloc.EndsWith(@"/"))
                     {
-                        Fileloc = Fileloc + @"/";
+                        fileloc = fileloc + @"/";
                     }
                 }
                 else
@@ -36,10 +39,10 @@ namespace QCDMWrapper
                     {
                         if (args[1].Equals("-o"))
                         {
-                            Fileloc = args[2];
-                            if (!Fileloc.EndsWith(@"/"))
+                            fileloc = args[2];
+                            if (!fileloc.EndsWith(@"/"))
                             {
-                                Fileloc = Fileloc + @"/";
+                                fileloc = fileloc + @"/";
                             }
                         }
                         else
@@ -49,18 +52,17 @@ namespace QCDMWrapper
                     }
                 }
             }
+            return fileloc;
         }
 
         //Figures out if you entered a single ID or a group of ID's//
-        public void Datalist()
+        public List<string> Datalist()
         {
-            var skip = false;
             var list = new List<string> { Input };
          
             if (Input != null && Input.Contains(","))
             {
-                list = List<string>(Input.Split(','));
-                skip = true;
+                list = new List<string>(Input.Split(','));
             }
 
             if (Input != null && Input.Contains("-"))
@@ -75,15 +77,15 @@ namespace QCDMWrapper
                     num2--;
                     list.Insert(1, num2.ToString(CultureInfo.InvariantCulture));
                 }
-                skip = true;
             }
 
-            if (skip == false)
-            {
-                list = new List<string> { Input };
-            }
-
+            Size = list.Count;
             return list;
+        }
+
+        public int GetSize()
+        {
+            return Size;
         }
     }
 }
