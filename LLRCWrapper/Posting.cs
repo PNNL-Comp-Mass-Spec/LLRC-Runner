@@ -16,19 +16,22 @@ namespace QCDMWrapper
         //Posts the QCDM metric to the database
         public void PostToDatabase(int size, List<string> list, List<List<string>> values, string fileloc)
         {
-            const int smaqcval = 53;
-            const int quamval = 7;
-            const int datasetval = 4;
+            //location of the values we need
+            const int smaqcval = 16;
+            const int quamval = 17;
+            const int datasetval = 3;
           
             int error = 0;
             for (int i = 0; i < size; i++)
             {
-                string smaqc = values[i][smaqcval];
-                string quametric = values[i][quamval];
-                string dataset = values[i][datasetval];
-                string dataId = list[i];
-                string qcdmvalue = GetQcdm(i, dataId, error, fileloc);
+                //Gets all the values out of the list
+                var smaqc = values[i][smaqcval];
+                var quametric = values[i][quamval];
+                var dataset = values[i][datasetval];
+                var dataId = list[i];
+                var qcdmvalue = GetQcdm(i, dataId, error, fileloc);
 
+                //if the GetQCDM returns na then it didnt have the correct id
                 if (qcdmvalue.Equals("NA"))
                 {
                     Console.WriteLine(dataId + " did not have enough information to get the QCDM");
@@ -36,10 +39,13 @@ namespace QCDMWrapper
                 }
                 else
                 {
-                    string xml = ConvertQcdmtoXml(qcdmvalue, smaqc, quametric, dataset);
+                    //converts to xml to be put into database
+                    var xml = ConvertQcdmtoXml(qcdmvalue, smaqc, quametric, dataset);
                     int data;
                     int.TryParse(dataId, out data);
                     var po = new Posting();
+
+                    //attempts to post to database and returns true or false
                     bool tf = po.PostQcdmResultsToDb(data, xml, Connection, Storedpro);
                     if (tf)
                     {
@@ -56,6 +62,7 @@ namespace QCDMWrapper
         //gets the QCDM value from the .csv file that is created from the R program
         public static string GetQcdm(int i, string id, int e, string fileloc)
         {
+            var idloc = 1;
             i++;
             i = i - e;
             string[] lines = File.ReadAllLines(fileloc + "TestingDataset.csv");
@@ -70,7 +77,8 @@ namespace QCDMWrapper
                 var curline = new List<string>(info.Split(','));
 
                 //Test to see if the R program was able to get results//
-                if (curline[3] == id)
+                //Compares the Id that the file has with the id that we are looking for//
+                if (curline[idloc] == id)
                 {
                     int spot = curline.Count - 1;
                     string qcdm = curline[spot];

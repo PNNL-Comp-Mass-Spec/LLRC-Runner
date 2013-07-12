@@ -13,14 +13,19 @@ namespace QCDMWrapper
         //Checks to see if there is a commmand line input and if in that input they specify a output folder to put data
         public string CmdInput(string[] args)
         {
-
+            //gets the location that the program is in
             var fileloc = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location) + @"\";
+
+            //sees if there is no arguements in which case it will ask for an ID
             if (args.Length == 0)
             {
                 Console.WriteLine(
                     "Please enter a single Data ID ,a group seperated by commas, or a range seperated by - : ");
                 Input = Console.ReadLine();
             }
+            
+            //If there are arguements we test to see if they are setting the location for data to be stored
+            //Or if they are trying to give us datasets
             else
             {
                 if (args[0].Equals("-o") && args.Length > 1)
@@ -60,11 +65,13 @@ namespace QCDMWrapper
         {
             var list = new List<string> { Input };
          
+            //Seperates it by commas if it finds a comma
             if (Input != null && Input.Contains(","))
             {
                 list = new List<string>(Input.Split(','));
             }
 
+            //Puts datasets between 2 values if it finds a -
             if (Input != null && Input.Contains("-"))
             {
                 list = new List<string>(Input.Split('-'));
@@ -83,6 +90,7 @@ namespace QCDMWrapper
             return list;
         }
 
+        //Gets the number of datasets
         public int GetSize()
         {
             return Size;

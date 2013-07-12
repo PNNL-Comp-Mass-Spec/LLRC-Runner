@@ -42,27 +42,32 @@ namespace QCDMWrapper
         }
 
         //Writes the data from the database into a .csv file to be used in the R program
-        public void WriteCsv(List<List<string>> csv, String t, int size, string fileloc)
+        public void WriteCsv(List<List<string>> csv, String t, int size, string fileloc, int subsize)
         {
             var sb = new StringBuilder();
             sb.AppendLine(t);
-            const int Dataset = 3;
-            const int XIC_WideFrac = 8;
-            const int MS1_TIC_Change_Q2 = 28;
-            const int MS1_TIC_Q2 = 31;
-            const int MS1_Density_Q1 = 36;
-            const int MS1_Density_Q2 = 37;
-            const int MS2_Density_Q1 = 41;
-            const int DS_2A = 64;
-            const int DS_2B = 65;
-            const int MS1_2B = 76;
-            const int P_2A = 92;
-            const int P_2B = 93;
-            const int P_2C = 94;
 
-            for (int i = 0; i < size; i++)
+            const int Instrument = 0;
+            const int Dataset = 1;
+            const int XIC_WideFrac = 4;
+            const int MS1_TIC_Change_Q2 = 5;
+            const int MS1_TIC_Q2 = 6;
+            const int MS1_Density_Q1 = 7;
+            const int MS1_Density_Q2 = 8;
+            const int MS2_Density_Q1 = 9;
+            const int DS_2A = 10;
+            const int DS_2B = 11;
+            const int MS1_2B = 12;
+            const int P_2A = 13;
+            const int P_2B = 14;
+            const int P_2C = 15;
+            var listsize = subsize;
+
+            for (var i = 0; i < size; i++)
             {
-                string instru = csv[i][0];
+                //Checks the instrument Catagory and checks to make sure the appropriate columns are present to calculate the results
+                //If a column is missing will return has misssing value else will add the values to the string builder
+                var instru = csv[i][Instrument];
                 if (instru.Equals("LTQ") || instru.Equals("LTQ-ETD") || instru.Equals("LTQ-Prep") || instru.Equals("VelosPro"))
                 {
                     if (csv[i][XIC_WideFrac] == "NA" || csv[i][MS2_Density_Q1] == "NA" || csv[i][P_2C] == "NA")
@@ -72,22 +77,10 @@ namespace QCDMWrapper
                     else
                     {
                         sb.Append("LTQ_IonTrap,");
-                        for (int j = 1; j < 52; j++)
-                        {
-                            if (j < 5 || j >= 8)
-                            {
-                                sb.Append(csv[i][j] + ",");
-                            }
-                            if (j >= 5 && j < 8)
-                            {
-                                sb.Append("NA,");
-                            }
-                        }
-                        for (int j = 53; j < 97; j++)
+                        for (int j = 1; j < listsize; j++)
                         {
                             sb.Append(csv[i][j] + ",");
                         }
-                        sb.AppendLine("2013,6");
                     }
                 }
                 if (instru.Equals("Exactive") || instru.Equals("QExactive"))
@@ -99,22 +92,10 @@ namespace QCDMWrapper
                     else
                     {
                         sb.Append("Exactive,");
-                        for (int j = 1; j < 52; j++)
-                        {
-                            if (j < 5 || j >= 8)
-                            {
-                                sb.Append(csv[i][j] + ",");
-                            }
-                            if (j >= 5 && j < 8)
-                            {
-                                sb.Append("NA,");
-                            }
-                        }
-                        for (int j = 53; j < 97; j++)
+                        for (int j = 1; j < listsize; j++)
                         {
                             sb.Append(csv[i][j] + ",");
                         }
-                        sb.AppendLine("2013,6");
                     }
                 }
                 if (instru.Equals("LTQ-FT") || instru.Equals("Orbitrap"))
@@ -128,22 +109,10 @@ namespace QCDMWrapper
                     else
                     {
                         sb.Append("Orbitrap,");
-                        for (int j = 1; j < 52; j++)
-                        {
-                            if (j < 5 || j >= 8)
-                            {
-                                sb.Append(csv[i][j] + ",");
-                            }
-                            if (j >= 5 && j < 8)
-                            {
-                                sb.Append("NA,");
-                            }
-                        }
-                        for (int j = 53; j < 97; j++)
+                        for (int j = 1; j < listsize; j++)
                         {
                             sb.Append(csv[i][j] + ",");
                         }
-                        sb.AppendLine("2013,6");
                     }
                 }
                 if (instru.Equals("VelosOrbi"))
@@ -156,24 +125,13 @@ namespace QCDMWrapper
                     else
                     {
                         sb.Append("VOrbitrap,");
-                        for (int j = 1; j < 52; j++)
-                        {
-                            if (j < 5 || j >= 8)
-                            {
-                                sb.Append(csv[i][j] + ",");
-                            }
-                            if (j >= 5 && j < 8)
-                            {
-                                sb.Append("NA,");
-                            }
-                        }
-                        for (int j = 53; j < 97; j++)
+                        for (int j = 1; j < listsize; j++)
                         {
                             sb.Append(csv[i][j] + ",");
                         }
-                        sb.AppendLine("2013,6");
                     }
                 }
+                sb.AppendLine("2013");
             }
             File.WriteAllText(fileloc + "data.csv", sb.ToString());
         }
