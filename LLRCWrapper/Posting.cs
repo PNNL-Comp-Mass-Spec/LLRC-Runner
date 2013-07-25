@@ -7,248 +7,292 @@ using System.Threading.Tasks;
 
 namespace QCDMWrapper
 {
-    class Posting
-    {
-        PRISM.DataBase.clsExecuteDatabaseSP _mExecuteSp;
-        public static string Connection = "Data Source=gigasax;Initial Catalog=DMS5;Integrated Security=SSPI;";
-        public static string Storedpro = "StoreQCDMResults";
+	class Posting
+	{
+		PRISM.DataBase.clsExecuteDatabaseSP _mExecuteSp;
+		public const string CONNECTION_STRING = "Data Source=gigasax;Initial Catalog=DMS5;Integrated Security=SSPI;";
+		public const string STORED_PROCEDURE = "StoreQCDMResults";
 
-        //Posts the QCDM metric to the database
-        public void PostToDatabase(int size, List<string> list, List<List<string>> values, string fileloc)
-        {
-            //location of the values we need
-            const int smaqcval = 16;
-            const int quamval = 17;
-            const int datasetval = 3;
-          
-            int error = 0;
-            for (int i = 0; i < size; i++)
-            {
-                //Gets all the values out of the list
-                var smaqc = values[i][smaqcval];
-                var quametric = values[i][quamval];
-                var dataset = values[i][datasetval];
-                var dataId = list[i];
-                var qcdmvalue = GetQcdm(i, dataId, error, fileloc);
+		//Posts the QCDM metric to the database
+		public void PostToDatabase(List<List<string>> lstMetricsByDataset, string outputFolderPath)
+		{
+			// Cache the QCDMResults
+			Dictionary<int, string> dctResults = CacheQCDMResults(outputFolderPath);
 
-                //if the GetQCDM returns na then it didnt have the correct id
-                if (qcdmvalue.Equals("NA"))
-                {
-                    Console.WriteLine(dataId + " did not have enough information to get the QCDM");
-                    error++;
-                }
-                else
-                {
-                    //converts to xml to be put into database
-                    var xml = ConvertQcdmtoXml(qcdmvalue, smaqc, quametric, dataset);
-                    int data;
-                    int.TryParse(dataId, out data);
-                    var po = new Posting();
+			foreach (List<string> metricsOneDataset in lstMetricsByDataset)
+			{
 
-                    //attempts to post to database and returns true or false
-                    bool tf = po.PostQcdmResultsToDb(data, xml, Connection, Storedpro);
-                    if (tf)
-                    {
-                        Console.WriteLine(dataId + " was successfully Posted to DB");
-                    }
-                    else
-                    {
-                        Console.WriteLine("Something went wrong with the PostQCDMResultsToDB function");
-                    }
-                }
-            }
-        }
+				// Gets all the values out of the list
+				string smaqcJob = metricsOneDataset[(int)DatabaseMang.MetricColumnIndex.SMAQC_Job];
+				string quameterJob = metricsOneDataset[(int)DatabaseMang.MetricColumnIndex.Quameter_Job];
+				string datasetID = metricsOneDataset[(int)DatabaseMang.MetricColumnIndex.DatasetID];
+				string datasetName = metricsOneDataset[(int)DatabaseMang.MetricColumnIndex.DatasetName];
 
-        //gets the QCDM value from the .csv file that is created from the R program
-        public static string GetQcdm(int i, string id, int e, string fileloc)
-        {
-            var idloc = 1;
-            i++;
-            i = i - e;
-            string[] lines = File.ReadAllLines(fileloc + "TestingDataset.csv");
-            if (lines.Length == 1)
-            {
-                Console.WriteLine("Nothing was calculated");
-                return "NA";
-            }
-            try
-            {
-                string info = lines[i];
-                var curline = new List<string>(info.Split(','));
+				int intDatasetId;
+				string LLRCPrediction;
 
-                //Test to see if the R program was able to get results//
-                //Compares the Id that the file has with the id that we are looking for//
-                if (curline[idloc] == id)
-                {
-                    int spot = curline.Count - 1;
-                    string qcdm = curline[spot];
-                    return qcdm;
-                }
-                return "NA";
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex);
-                return "NA";
-            }
-        }
+				if (!int.TryParse(datasetID, out intDatasetId))
+				{
+					Console.WriteLine("DatasetID is not an integer: " + datasetID);
+					continue;
+				}
 
-        //Converts the QCDM to xml to be used by database
-        private static string ConvertQcdmtoXml(string qcdmvalue, string smaqc, string quameter, string dataset)
-        {
-            var sbXml = new System.Text.StringBuilder();
-            string sXmlResults;
+				if (!dctResults.TryGetValue(intDatasetId, out LLRCPrediction))
+				{
+					Console.WriteLine("LLRC value not computed for DatasetID " + intDatasetId);
+					continue;
+				}
 
-            try
-            {
-                sbXml.Append("<?xml version=\"1.0\" encoding=\"utf-8\" standalone=\"yes\"?>");
-                sbXml.Append("<QCDM_Results>");
+				// Create XML for posting to the database
+				var xml = ConvertQcdmtoXml(LLRCPrediction, smaqcJob, quameterJob, datasetName);
 
-                sbXml.Append("<Dataset>" + dataset + "</Dataset>");
-                if (smaqc == "NA")
-                {
-                    smaqc = "0";
-                }
-                sbXml.Append("<SMAQC_Job>" + smaqc + "</SMAQC_Job>");
-                sbXml.Append("<Quameter_Job>" + quameter + "</Quameter_Job>");
+				Posting po = new Posting();
 
-                sbXml.Append("<Measurements>");
-                sbXml.Append("<Measurement Name=\"" + "QCDM" + "\">" + qcdmvalue + "</Measurement>");
-                sbXml.Append("</Measurements>");
+				//attempts to post to database and returns true or false
+				bool success = po.PostQcdmResultsToDb(intDatasetId, xml, CONNECTION_STRING, STORED_PROCEDURE);
+				if (success)
+				{
+					Console.WriteLine("Successfully posted results for DatasetID " + datasetID + " to the database");
+				}
+				else
+				{
+					Console.WriteLine("Error posting results for DatasetID " + datasetID + " to the database");
+				}
+			
+			}
+		}
 
-                sbXml.Append("</QCDM_Results>");
+		//gets the QCDM value from the .csv file that is created from the R program
+		public Dictionary<int, string> CacheQCDMResults(string outputFolderPath)
+		{
+			string resultsFilePath = Path.Combine(outputFolderPath, "TestingDataset.csv");
+			Dictionary<int, string> results = new Dictionary<int, string>();
 
-                sXmlResults = sbXml.ToString();
+			if (!File.Exists(resultsFilePath))
+			{
+				Console.WriteLine("Results file not found: " + resultsFilePath);
+				return results;
+			}
 
-            }
-            catch (Exception ex)
-            {
-                var error1 = "Error converting Quameter results to XML" + ex;
-                Console.WriteLine(error1);
-                return "";
-            }
+			using (StreamReader srResults = new StreamReader(new FileStream(resultsFilePath, FileMode.Open, FileAccess.Read, FileShare.Read)))
+			{
+				bool headersParsed = false;
+				int colIndexLLRC = -1;
 
-            return sXmlResults;
+				while (srResults.Peek() > -1)
+				{
+					string resultLine = srResults.ReadLine();
+					string[] resultValues = resultLine.Split(',');
 
-        }
+					if (resultValues.Length < 1)
+						continue;
 
-        //Posts the xml to the database
-        public bool PostQcdmResultsToDb(int intDatasetId, string sXmlResults, string sConnectionString, string sStoredProcedure)
-        {
+					if (!headersParsed)
+					{
+						// The final column should be the LLRC value
+						if (resultValues[resultValues.Length - 1].StartsWith("\"LLRC.Prediction"))
+						{
+							colIndexLLRC = resultValues.Length - 1;
+							headersParsed = true;
+						}
+						else
+						{
+							Console.WriteLine("Error, last column of the header line in the results file does not start with LLRC: " + resultsFilePath);
+							return results;
+						}
+					}
+					else
+					{
+						int datasetID;
+						double LLRCPrediction;
 
-            const int maxRetryCount = 3;
-            const int secBetweenRetries = 20;
+						if (int.TryParse(resultValues[(int)DatabaseMang.MetricColumnIndex.DatasetID], out datasetID))
+						{
 
-            int intStartIndex = 0;
-            int intResult = 0;
+							if (double.TryParse(resultValues[colIndexLLRC], out LLRCPrediction))
+							{
+								results.Add(datasetID, resultValues[colIndexLLRC]);
+							}
+						}
+					}
 
-            string sXMLResultsClean = null;
+				}
+			}
 
-            System.Data.SqlClient.SqlCommand objCommand;
+			return results;
 
-            bool blnSuccess = false;
+		}
+		
+		/// <summary>
+		/// Converts the QCDM to xml to be used by database
+		/// </summary>
+		/// <param name="LLRCPrediction"></param>
+		/// <param name="smaqcJob"></param>
+		/// <param name="quameterJob"></param>
+		/// <param name="datasetName"></param>
+		/// <returns></returns>
+		private string ConvertQcdmtoXml(string LLRCPrediction, string smaqcJob, string quameterJob, string datasetName)
+		{
+			var sbXml = new System.Text.StringBuilder();
+			string sXmlResults;
 
-            try
-            {
-                Console.WriteLine("Posting QCDM Results to the database (using Dataset ID " + intDatasetId.ToString() + ")");
+			try
+			{
+				sbXml.Append("<?xml version=\"1.0\" encoding=\"utf-8\" standalone=\"yes\"?>");
+				sbXml.Append("<QCDM_Results>");
 
-                // We need to remove the encoding line from sXMLResults before posting to the DB
-                // This line will look like this:
-                //   <?xml version="1.0" encoding="utf-8" standalone="yes"?>
+				sbXml.Append("<Dataset>" + datasetName + "</Dataset>");
+				if (smaqcJob == "NA")
+				{
+					smaqcJob = "0";
+				}
+				sbXml.Append("<SMAQC_Job>" + smaqcJob + "</SMAQC_Job>");
+				sbXml.Append("<Quameter_Job>" + quameterJob + "</Quameter_Job>");
 
-                intStartIndex = sXmlResults.IndexOf("?>");
-                if (intStartIndex > 0)
-                {
-                    sXMLResultsClean = sXmlResults.Substring(intStartIndex + 2).Trim();
-                }
-                else
-                {
-                    sXMLResultsClean = sXmlResults;
-                }
+				sbXml.Append("<Measurements>");
+				sbXml.Append("<Measurement Name=\"" + "QCDM" + "\">" + LLRCPrediction + "</Measurement>");
+				sbXml.Append("</Measurements>");
 
-                // Call stored procedure sStoredProcedure using connection string sConnectionString
+				sbXml.Append("</QCDM_Results>");
 
-                objCommand = new System.Data.SqlClient.SqlCommand();
+				sXmlResults = sbXml.ToString();
 
-                {
-                    objCommand.CommandType = System.Data.CommandType.StoredProcedure;
-                    objCommand.CommandText = sStoredProcedure;
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine("Error converting Quameter results to XML; details:");
+				Console.WriteLine(ex);
+				return string.Empty;
+			}
 
-                    objCommand.Parameters.Add(new System.Data.SqlClient.SqlParameter("@Return", System.Data.SqlDbType.Int));
-                    objCommand.Parameters["@Return"].Direction = System.Data.ParameterDirection.ReturnValue;
+			return sXmlResults;
 
-                    objCommand.Parameters.Add(new System.Data.SqlClient.SqlParameter("@DatasetID", System.Data.SqlDbType.Int));
-                    objCommand.Parameters["@DatasetID"].Direction = System.Data.ParameterDirection.Input;
-                    objCommand.Parameters["@DatasetID"].Value = intDatasetId;
+		}
 
-                    objCommand.Parameters.Add(new System.Data.SqlClient.SqlParameter("@ResultsXML", System.Data.SqlDbType.Xml));
-                    objCommand.Parameters["@ResultsXML"].Direction = System.Data.ParameterDirection.Input;
-                    objCommand.Parameters["@ResultsXML"].Value = sXMLResultsClean;
-                }
+		/// <summary>
+		/// Posts the xml to the database
+		/// </summary>
+		/// <param name="intDatasetId"></param>
+		/// <param name="sXmlResults"></param>
+		/// <param name="sConnectionString"></param>
+		/// <param name="sStoredProcedure"></param>
+		/// <returns></returns>
+		public bool PostQcdmResultsToDb(int intDatasetId, string sXmlResults, string sConnectionString, string sStoredProcedure)
+		{
 
-                _mExecuteSp = new PRISM.DataBase.clsExecuteDatabaseSP(sConnectionString);
-                AttachExecuteSpEvents();
+			const int maxRetryCount = 3;
+			const int secBetweenRetries = 20;
 
-                intResult = _mExecuteSp.ExecuteSP(objCommand, maxRetryCount, secBetweenRetries);
+			int intStartIndex = 0;
+			int intResult = 0;
 
-                if (intResult == PRISM.DataBase.clsExecuteDatabaseSP.RET_VAL_OK)
-                {
-                    // No errors
-                    blnSuccess = true;
-                }
-                else
-                {
-                    string error1 = "Error storing Quameter Results in database, " + sStoredProcedure + " returned " + intResult.ToString();
-                    Console.WriteLine(error1);
-                    blnSuccess = false;
-                }
+			string sXMLResultsClean = null;
 
-            }
-            catch (System.Exception ex)
-            {
-                string error2 = "Exception storing Quameter Results in database" + ex;
-                Console.WriteLine(error2);
-                blnSuccess = false;
-            }
-            finally
-            {
-                DetachExecuteSpEvents();
-                _mExecuteSp = null;
-            }
+			System.Data.SqlClient.SqlCommand objCommand;
 
-            return blnSuccess;
-        }
+			bool blnSuccess = false;
 
-        private void AttachExecuteSpEvents()
-        {
-            try
-            {
-                _mExecuteSp.DBErrorEvent += new PRISM.DataBase.clsExecuteDatabaseSP.DBErrorEventEventHandler(mExecuteSP_DBErrorEvent);
-            }
-            catch
-            {
-                // Ignore errors here
-            }
-        }
+			try
+			{
+				Console.WriteLine("Posting QCDM Results to the database (using Dataset ID " + intDatasetId.ToString() + ")");
 
-        private void DetachExecuteSpEvents()
-        {
-            try
-            {
-                if (_mExecuteSp != null)
-                {
-                    _mExecuteSp.DBErrorEvent -= mExecuteSP_DBErrorEvent;
-                }
-            }
-            catch
-            {
-                // Ignore errors here
-            }
-        }
+				// We need to remove the encoding line from sXMLResults before posting to the DB
+				// This line will look like this:
+				//   <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 
-        private static void mExecuteSP_DBErrorEvent(string message)
-        {
-            Console.WriteLine("Stored procedure execution error: " + message);
-        }
-    }
+				intStartIndex = sXmlResults.IndexOf("?>");
+				if (intStartIndex > 0)
+				{
+					sXMLResultsClean = sXmlResults.Substring(intStartIndex + 2).Trim();
+				}
+				else
+				{
+					sXMLResultsClean = sXmlResults;
+				}
+
+				// Call stored procedure sStoredProcedure using connection string sConnectionString
+
+				objCommand = new System.Data.SqlClient.SqlCommand();
+
+				{
+					objCommand.CommandType = System.Data.CommandType.StoredProcedure;
+					objCommand.CommandText = sStoredProcedure;
+
+					objCommand.Parameters.Add(new System.Data.SqlClient.SqlParameter("@Return", System.Data.SqlDbType.Int));
+					objCommand.Parameters["@Return"].Direction = System.Data.ParameterDirection.ReturnValue;
+
+					objCommand.Parameters.Add(new System.Data.SqlClient.SqlParameter("@DatasetID", System.Data.SqlDbType.Int));
+					objCommand.Parameters["@DatasetID"].Direction = System.Data.ParameterDirection.Input;
+					objCommand.Parameters["@DatasetID"].Value = intDatasetId;
+
+					objCommand.Parameters.Add(new System.Data.SqlClient.SqlParameter("@ResultsXML", System.Data.SqlDbType.Xml));
+					objCommand.Parameters["@ResultsXML"].Direction = System.Data.ParameterDirection.Input;
+					objCommand.Parameters["@ResultsXML"].Value = sXMLResultsClean;
+				}
+
+				_mExecuteSp = new PRISM.DataBase.clsExecuteDatabaseSP(sConnectionString);
+				AttachExecuteSpEvents();
+
+				intResult = _mExecuteSp.ExecuteSP(objCommand, maxRetryCount, secBetweenRetries);
+
+				if (intResult == PRISM.DataBase.clsExecuteDatabaseSP.RET_VAL_OK)
+				{
+					// No errors
+					blnSuccess = true;
+				}
+				else
+				{
+					string message = "Error storing Quameter Results in database, " + sStoredProcedure + " returned " + intResult.ToString();
+					Console.WriteLine(message);
+					blnSuccess = false;
+				}
+
+			}
+			catch (System.Exception ex)
+			{
+				Console.WriteLine("Exception storing Quameter Results in database; details");
+				Console.WriteLine(ex);
+				blnSuccess = false;
+			}
+			finally
+			{
+				DetachExecuteSpEvents();
+				_mExecuteSp = null;
+			}
+
+			return blnSuccess;
+		}
+
+		private void AttachExecuteSpEvents()
+		{
+			try
+			{
+				_mExecuteSp.DBErrorEvent += new PRISM.DataBase.clsExecuteDatabaseSP.DBErrorEventEventHandler(mExecuteSP_DBErrorEvent);
+			}
+			catch
+			{
+				// Ignore errors here
+			}
+		}
+
+		private void DetachExecuteSpEvents()
+		{
+			try
+			{
+				if (_mExecuteSp != null)
+				{
+					_mExecuteSp.DBErrorEvent -= mExecuteSP_DBErrorEvent;
+				}
+			}
+			catch
+			{
+				// Ignore errors here
+			}
+		}
+
+		private void mExecuteSP_DBErrorEvent(string message)
+		{
+			Console.WriteLine("Stored procedure execution error: " + message);
+		}
+	}
 }

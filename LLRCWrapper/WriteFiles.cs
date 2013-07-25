@@ -8,136 +8,204 @@ namespace QCDMWrapper
 {
     class WriteFiles
     {
-        public static string LlrCloc = "QCDMscript.r";
-        public static string Rloc = GetRPathFromWindowsRegistry();
+        public const string LLR_SCRIPT_NAME = "QCDMscript.r";
+		public string mRProgramPath;
 
-        //Deletes old files so they dont interfer with new ones
-        public void DeleteFiles(string fileloc)
+		protected const string HEADER_LINE = "Instrument_Category, Dataset_ID, Instrument, Dataset, XIC_WideFrac, MS1_TIC_Change_Q2, MS1_TIC_Q2, MS1_Density_Q1, MS1_Density_Q2, MS2_Density_Q1, DS_2A, DS_2B, MS1_2B, P_2A, P_2B, P_2C, SMAQC_Job, Quameter_Job, XIC_FWHM_Q1, XIC_FWHM_Q2, XIC_FWHM_Q3, XIC_Height_Q2, XIC_Height_Q3, XIC_Height_Q4, RT_Duration, RT_TIC_Q1, RT_TIC_Q2, RT_TIC_Q3, RT_TIC_Q4, RT_MS_Q1, RT_MS_Q2, RT_MS_Q3, RT_MS_Q4, RT_MSMS_Q1, RT_MSMS_Q2, RT_MSMS_Q3, RT_MSMS_Q4, MS1_TIC_Change_Q3, MS1_TIC_Change_Q4, MS1_TIC_Q3, MS1_TIC_Q4, MS1_Count, MS1_Freq_Max, MS1_Density_Q3, MS2_Count, MS2_Freq_Max, MS2_Density_Q2, MS2_Density_Q3, MS2_PrecZ_1, MS2_PrecZ_2, MS2_PrecZ_3, MS2_PrecZ_4, MS2_PrecZ_5, MS2_PrecZ_more, MS2_PrecZ_likely_1, MS2_PrecZ_likely_multi, Quameter_Last_Affected, C_1A, C_1B, C_2A, C_2B, C_3A, C_3B, C_4A, C_4B, C_4C, DS_1A, DS_1B, DS_3A, DS_3B, IS_1A, IS_1B, IS_2, IS_3A, IS_3B, IS_3C, MS1_1, MS1_2A, MS1_3A, MS1_3B, MS1_5A, MS1_5B, MS1_5C, MS1_5D, MS2_1, MS2_2, MS2_3, MS2_4A, MS2_4B, MS2_4C, MS2_4D, P_1A, P_1B, P_3, Smaqc_Last_Affected, PSM_Source_Job, year";
+
+
+		/// <summary>
+		/// Constructor
+		/// </summary>
+		public WriteFiles()
+		{
+			 mRProgramPath = GetRPathFromWindowsRegistry();
+		}
+
+		/// <summary>
+		/// Factory method to create a generic list given several values
+		/// </summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="values"></param>
+		/// <returns></returns>
+		protected List<T> CreateList<T>(params T[] values)
+		{
+			return new List<T>(values);
+		}
+
+        /// <summary>
+		/// Deletes old files so they dont interfere with new ones
+        /// </summary>
+        /// <param name="fileloc"></param>
+		public void DeleteFiles(string outputFolderPath)
         {
-            if (File.Exists(fileloc + "TestingDataset.csv"))
-            {
-                File.Delete(fileloc + "TestingDataset.csv");
+			List<string> lstFilesToDelete = CreateList("TestingDataset.csv", "data.csv");
+			
+			foreach (string fileName in lstFilesToDelete)
+			{
+				FileInfo fiFile = new FileInfo(Path.Combine(outputFolderPath, fileName));
+				if (fiFile.Exists)
+					fiFile.Delete();
             }
-            if (File.Exists(fileloc + "data.csv"))
-            {
-                File.Delete(fileloc + "data.csv");
-            }
+
         }
 
-        //Writes the .R file to run the formula
-        public void WriteRFile(string fileloc)
+		protected bool RowIsMissingValues(string datasetName, List<string> row, Dictionary<int, string> dctRequiredValues)
+		{
+			foreach (var item in dctRequiredValues)
+			{
+				if (string.IsNullOrWhiteSpace(row[item.Key]) || row[item.Key] == "NA")
+				{
+					Console.WriteLine("Dataset " + datasetName + " has a missing value for column " + item.Value);
+					return true;
+				}
+			}
+
+			return false;
+		}
+
+        /// <summary>
+		/// Writes the .R file to run the formula
+        /// </summary>
+        /// <param name="fileloc"></param>
+		public void WriteRFile(string outputFolderPath)
         {
-            string ffileloc = fileloc.Replace(@"\", "/");
-            File.WriteAllText(ffileloc + LlrCloc, "require(QCDM)" + "\n" +
-            "outDataName <- " + '"' + ffileloc + @"allData_v3.Rdata" + '"' + "\n" +
-            "outputFolder <- " + '"' + ffileloc + '"' + "\n" +
-            "ncdataFilename <- " + '"' + ffileloc + @"data.csv" + '"' + "\n" +
-            "noncuratedPrediction(ncdataFilename=ncdataFilename, modelsFile=paste(outputFolder,\"Models_paper.Rdata\",sep=\"\"), dataFilename=outDataName,outputFolder=outputFolder)");
+			string folderPathUnix = outputFolderPath.Replace(@"\", "/");
+			if (!folderPathUnix.EndsWith("/"))
+				folderPathUnix += '/';
+
+			string contents = "require(QCDM)" + "\n" +
+            "outDataName <- " + '"' + folderPathUnix + "allData_v3.Rdata" + '"' + "\n" +
+            "outputFolder <- " + '"' + folderPathUnix + '"' + "\n" +
+			"ncdataFilename <- " + '"' + folderPathUnix + "data.csv" + '"' + "\n" +
+            "noncuratedPrediction(ncdataFilename=ncdataFilename, modelsFile=paste(outputFolder,\"Models_paper.Rdata\",sep=\"\"), dataFilename=outDataName,outputFolder=outputFolder)";
+
+			File.WriteAllText(Path.Combine(outputFolderPath, LLR_SCRIPT_NAME), contents);
         }
 
-        //Writes the batch file to run the .R file
+        /// <summary>
+		/// Writes the batch file to run the .R file
+        /// </summary>
+        /// <param name="fileloc"></param>
         public void WriteBatch(string fileloc)
         {
-            File.WriteAllText(fileloc + "RunR.bat", '"' + Rloc + '"' + " CMD BATCH --vanilla --slave " + '"' + fileloc + LlrCloc + '"');
+			string contents = '"' + mRProgramPath + '"' + " CMD BATCH --vanilla --slave " + '"' + Path.Combine(fileloc, LLR_SCRIPT_NAME) + '"';
+            File.WriteAllText(Path.Combine(fileloc, "RunR.bat"), contents);
         }
 
-        //Writes the data from the database into a .csv file to be used in the R program
-        public void WriteCsv(List<List<string>> csv, String t, int size, string fileloc, int subsize)
+        /// <summary>
+		/// Writes the data from the database into a .csv file to be used in the R program
+        /// </summary>
+        /// <param name="lstMetricsByDataset"></param>
+        /// <param name="size"></param>
+        /// <param name="fileloc"></param>
+        /// <param name="metricCount"></param>
+		public void WriteCsv(List<List<string>> lstMetricsByDataset, string outputFolderPath, int metricCount)
         {
-            var sb = new StringBuilder();
-            sb.AppendLine(t);
 
-            const int Instrument = 0;
-            const int Dataset = 1;
-            const int XIC_WideFrac = 4;
-            const int MS1_TIC_Change_Q2 = 5;
-            const int MS1_TIC_Q2 = 6;
-            const int MS1_Density_Q1 = 7;
-            const int MS1_Density_Q2 = 8;
-            const int MS2_Density_Q1 = 9;
-            const int DS_2A = 10;
-            const int DS_2B = 11;
-            const int MS1_2B = 12;
-            const int P_2A = 13;
-            const int P_2B = 14;
-            const int P_2C = 15;
-            var listsize = subsize;
+			StringBuilder sb = new StringBuilder();
+			sb.AppendLine(HEADER_LINE);
 
-            for (var i = 0; i < size; i++)
-            {
+			foreach (List<string> metricsOneDataset in lstMetricsByDataset)
+			{
+		
                 //Checks the instrument Catagory and checks to make sure the appropriate columns are present to calculate the results
                 //If a column is missing will return has misssing value else will add the values to the string builder
-                var instru = csv[i][Instrument];
-                if (instru.Equals("LTQ") || instru.Equals("LTQ-ETD") || instru.Equals("LTQ-Prep") || instru.Equals("VelosPro"))
+				string instrumentGroup = metricsOneDataset[DatabaseMang.MetricColumnIndex.InstrumentGroup];
+				Dictionary<int, string> dctRequiredValues = new Dictionary<int, string>();
+
+                if (instrumentGroup.Equals("LTQ") || instrumentGroup.Equals("LTQ-ETD") || instrumentGroup.Equals("LTQ-Prep") || instrumentGroup.Equals("VelosPro"))
                 {
-                    if (csv[i][XIC_WideFrac] == "NA" || csv[i][MS2_Density_Q1] == "NA" || csv[i][P_2C] == "NA")
-                    {
-                        Console.WriteLine(csv[i][Dataset] + " Has a missing value");
-                    }
-                    else
-                    {
-                        sb.Append("LTQ_IonTrap,");
-                        for (int j = 1; j < listsize; j++)
-                        {
-                            sb.Append(csv[i][j] + ",");
-                        }
-                    }
+					dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.XIC_WideFrac, "XIC_WideFrac");
+					dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.MS2_Density_Q1, "MS2_Density_Q1");
+					dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.P_2C, "P_2C");
+
+					if (!RowIsMissingValues(metricsOneDataset[DatabaseMang.MetricColumnIndex.DatasetID], metricsOneDataset, dctRequiredValues))
+					{
+						sb.Append("LTQ_IonTrap,");
+						// Append the remaining values
+						for (int j = 1; j < metricCount; j++)
+						{
+							sb.Append(metricsOneDataset[j] + ",");
+						}
+					}
+                  
                 }
-                if (instru.Equals("Exactive") || instru.Equals("QExactive"))
+
+                if (instrumentGroup.Equals("Exactive") || instrumentGroup.Equals("QExactive"))
                 {
-                    if (csv[i][MS1_TIC_Q2] == "NA" || csv[i][MS1_Density_Q1] == "NA")
-                    {
-                        Console.WriteLine(csv[i][Dataset] + " Has a missing value");
-                    }
-                    else
-                    {
-                        sb.Append("Exactive,");
-                        for (int j = 1; j < listsize; j++)
-                        {
-                            sb.Append(csv[i][j] + ",");
-                        }
-                    }
+					dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.MS1_TIC_Q2, "MS1_TIC_Q2");
+					dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.MS1_Density_Q1, "MS1_Density_Q1");
+
+					if (!RowIsMissingValues(metricsOneDataset[DatabaseMang.MetricColumnIndex.DatasetID], metricsOneDataset, dctRequiredValues))
+					{
+						sb.Append("Exactive,");
+						// Append the remaining values
+						for (int j = 1; j < metricCount; j++)
+						{
+							sb.Append(metricsOneDataset[j] + ",");
+						}
+					}
+
                 }
-                if (instru.Equals("LTQ-FT") || instru.Equals("Orbitrap"))
+
+                if (instrumentGroup.Equals("LTQ-FT") || instrumentGroup.Equals("Orbitrap"))
                 {
-                    if (csv[i][XIC_WideFrac] == "NA" || csv[i][MS1_TIC_Change_Q2] == "NA" || csv[i][MS1_TIC_Q2] == "NA" || 
-                        csv[i][MS1_Density_Q1] == "NA" || csv[i][MS1_Density_Q2] == "NA" || csv[i][DS_2A] == "NA" ||
-                        csv[i][P_2B] == "NA" || csv[i][P_2A] == "NA" || csv[i][DS_2B] == "NA")
-                    {
-                        Console.WriteLine(csv[i][Dataset] + " Has a missing value");
-                    }
-                    else
-                    {
-                        sb.Append("Orbitrap,");
-                        for (int j = 1; j < listsize; j++)
-                        {
-                            sb.Append(csv[i][j] + ",");
-                        }
-                    }
+					dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.XIC_WideFrac, "XIC_WideFrac");
+					dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.MS1_TIC_Change_Q2, "MS1_TIC_Change_Q2");
+					dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.MS1_TIC_Q2, "MS1_TIC_Q2");
+					dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.MS1_Density_Q1, "MS1_Density_Q1");
+					dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.MS1_Density_Q2, "MS1_Density_Q2");
+					dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.DS_2A, "DS_2A");
+					dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.P_2B, "P_2B");
+					dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.P_2A, "P_2A");
+					dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.DS_2B, "DS_2B");
+
+					if (!RowIsMissingValues(metricsOneDataset[DatabaseMang.MetricColumnIndex.DatasetID], metricsOneDataset, dctRequiredValues))
+					{
+						sb.Append("Orbitrap,");
+						// Append the remaining values
+						for (int j = 1; j < metricCount; j++)
+						{
+							sb.Append(metricsOneDataset[j] + ",");
+						}
+					}
+               
                 }
-                if (instru.Equals("VelosOrbi"))
+
+                if (instrumentGroup.Equals("VelosOrbi"))
                 {
-                    if (csv[i][XIC_WideFrac] == "NA" || csv[i][MS2_Density_Q1] == "NA" || csv[i][MS1_2B] == "NA" ||
-                        csv[i][MS1_Density_Q1] == "NA" || csv[i][P_2B] == "NA" || csv[i][P_2A] == "NA" || csv[i][DS_2B] == "NA")
-                    {
-                        Console.WriteLine(csv[i][Dataset] + " Has a missing value");
-                    }
-                    else
-                    {
-                        sb.Append("VOrbitrap,");
-                        for (int j = 1; j < listsize; j++)
-                        {
-                            sb.Append(csv[i][j] + ",");
-                        }
-                    }
+					dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.XIC_WideFrac, "XIC_WideFrac");
+					dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.MS2_Density_Q1, "MS2_Density_Q1");
+					dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.MS1_2B, "MS1_2B");
+					dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.MS1_Density_Q1, "MS1_Density_Q1");
+					dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.P_2B, "P_2B");
+					dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.P_2A, "P_2A");
+					dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.DS_2B, "DS_2B");
+
+					if (!RowIsMissingValues(metricsOneDataset[DatabaseMang.MetricColumnIndex.DatasetID], metricsOneDataset, dctRequiredValues))
+					{
+						sb.Append("VOrbitrap,");
+						// Append the remaining values
+						for (int j = 1; j < metricCount; j++)
+						{
+							sb.Append(metricsOneDataset[j] + ",");
+						}
+					}              
                 }
-                sb.AppendLine("2013");
+
+				// Append the current year
+                sb.AppendLine(System.DateTime.Now.Year.ToString());
             }
-            File.WriteAllText(fileloc + "data.csv", sb.ToString());
+
+			File.WriteAllText(Path.Combine(outputFolderPath, "data.csv"), sb.ToString());
         }
 
-        //Gets the location of where the R is installed
-        public static string GetRPathFromWindowsRegistry()
+        /// <summary>
+		/// Gets the location of where the R is installed
+        /// </summary>
+        /// <returns></returns>
+        public string GetRPathFromWindowsRegistry()
         {
             const string RCORE_SUBKEY = @"SOFTWARE\R-core";
 

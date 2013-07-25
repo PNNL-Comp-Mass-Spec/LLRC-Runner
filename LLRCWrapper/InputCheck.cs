@@ -7,93 +7,166 @@ namespace QCDMWrapper
 {
     class InputCheck
     {
-        public static string Input;
-        public static int Size;
+		// Could have a single datasetID, a comma-separated list of IDs, or a range of DatasetIDs
+        protected string mDatasetIDList;
+		protected List<int> mDatasetIDs;
 
-        //Checks to see if there is a commmand line input and if in that input they specify a output folder to put data
+		public List<int> DatasetIDs
+		{
+			get
+			{
+				return mDatasetIDs;
+			}
+		}
+
+		// Constructor
+		public InputCheck()
+		{
+			mDatasetIDList = string.Empty;
+			mDatasetIDs = new List<int>();
+		}
+
+        /// <summary>
+		/// Checks to see if there is a commmand line input and if in that input they specify a output folder to put data
+        /// </summary>
+        /// <param name="args"></param>
+        /// <returns>Output folder path</returns>
         public string CmdInput(string[] args)
         {
             //gets the location that the program is in
-            var fileloc = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location) + @"\";
+            string outputFolderPath = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+			mDatasetIDList = string.Empty;
 
-            //sees if there is no arguements in which case it will ask for an ID
+            // Examine the arguments
             if (args.Length == 0)
             {
-                Console.WriteLine(
-                    "Please enter a single Data ID ,a group seperated by commas, or a range seperated by - : ");
-                Input = Console.ReadLine();
+				ShowSyntax();
+				return string.Empty;
             }
-            
-            //If there are arguements we test to see if they are setting the location for data to be stored
-            //Or if they are trying to give us datasets
             else
             {
-                if (args[0].Equals("-o") && args.Length > 1)
+				// Parse the arguments
+				mDatasetIDList = args[0];
+                if (args.Length > 1)
                 {
-                    fileloc = args[1];
-                    Input = args[2];
-                    if (!fileloc.EndsWith(@"/"))
+                    if (args.Length > 2 && args[1].Equals("-o"))
                     {
-                        fileloc = fileloc + @"/";
+                        outputFolderPath = args[2];
+                    }
+                    else
+                    {
+						ShowSyntax();
+						return string.Empty;
                     }
                 }
-                else
-                {
-                    Input = args[0];
-                    if (args.Length > 1)
-                    {
-                        if (args[1].Equals("-o"))
-                        {
-                            fileloc = args[2];
-                            if (!fileloc.EndsWith(@"/"))
-                            {
-                                fileloc = fileloc + @"/";
-                            }
-                        }
-                        else
-                        {
-                            Console.WriteLine("Your request is unkown");
-                        }
-                    }
-                }
+
+				ParseDatasetIDList();
             }
-            return fileloc;
+
+            return outputFolderPath;
         }
 
-        //Figures out if you entered a single ID or a group of ID's//
-        public List<string> Datalist()
+		protected void ShowSyntax()
+		{
+			string exeName = Path.GetFileName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+			Console.WriteLine();
+			Console.WriteLine("Program Syntax:");
+			Console.WriteLine(exeName + " DatasetIDList [-o OutputFolderPath]");
+
+			Console.WriteLine();
+			Console.WriteLine("DatasetIDList can be a single DatasetID,\n  a list of DatasetIDs separated by commas,\n  or a range of DatasetIDs separated with a dash");
+			Console.WriteLine("Mode 1: 325145");
+			Console.WriteLine("Mode 2: 325145,325146,325150");
+			Console.WriteLine("Mode 3: 325145-325150");
+			
+			Console.WriteLine();
+			Console.WriteLine("The -o switch is optional");
+
+		}
+
+        /// <summary>
+		/// Parses the DatasetID list or range into a valid list of DatasetIDs
+        /// </summary>
+        /// <returns>True if success; false if an error or no Dataset IDs</returns>
+        protected bool ParseDatasetIDList()
         {
-            var list = new List<string> { Input };
-         
-            //Seperates it by commas if it finds a comma
-            if (Input != null && Input.Contains(","))
-            {
-                list = new List<string>(Input.Split(','));
-            }
+			List<string> lstDatasetIDText = new List<string>();
+			bool listProcessed = false;
 
-            //Puts datasets between 2 values if it finds a -
-            if (Input != null && Input.Contains("-"))
-            {
-                list = new List<string>(Input.Split('-'));
-                int num1;
-                int.TryParse(list[0], out num1);
-                int num2;
-                int.TryParse(list[1], out num2);
-                while (num1 + 1 < num2)
-                {
-                    num2--;
-                    list.Insert(1, num2.ToString(CultureInfo.InvariantCulture));
-                }
-            }
+			if (string.IsNullOrWhiteSpace(mDatasetIDList))
+				return false;
 
-            Size = list.Count;
-            return list;
+			mDatasetIDs.Clear();
+
+			if (!listProcessed && mDatasetIDList.IndexOf(',') > 0)
+			{
+				// Split mDatasetIDList on commas
+				lstDatasetIDText = new List<string>(mDatasetIDList.Split(','));
+
+				foreach (string datasetID in lstDatasetIDText)
+				{
+					int value;
+					if (int.TryParse(datasetID, out value))
+					{
+						mDatasetIDs.Add(value);
+					}
+				}
+				listProcessed = true;
+			}
+
+			if (!listProcessed && mDatasetIDList.IndexOf('-') > 0)
+			{
+				// Split mDatasetIDList on the dash
+				lstDatasetIDText = new List<string>(mDatasetIDList.Split('-'));
+
+				if (lstDatasetIDText.Count != 2)
+				{
+					Console.WriteLine("Error: DatasetIDList contains a dash but does not contain two numbers separated by a dash: " + mDatasetIDList);
+					ShowSyntax();
+					return false;
+				}
+
+				int datasetIDStart;
+				int datasetIDEnd;
+
+				int value;
+				if (int.TryParse(lstDatasetIDText[0], out value))
+				{
+					datasetIDStart = value;
+
+					
+					if (int.TryParse(lstDatasetIDText[1], out value))
+					{
+						datasetIDEnd = value;
+
+						mDatasetIDs.AddRange(System.Linq.Enumerable.Range(datasetIDStart, datasetIDEnd));					
+					}
+				}
+
+				listProcessed = true;
+			}
+
+			if (!listProcessed)
+			{
+				int value;
+				if (int.TryParse(mDatasetIDList, out value))
+				{
+					mDatasetIDs.Add(value);
+				}
+				listProcessed = true;
+			}
+
+			if (!listProcessed || mDatasetIDs.Count == 0)
+			{
+				ShowSyntax();
+				return false;
+			}
+			else
+			{
+				return true;
+			}
+
         }
-
-        //Gets the number of datasets
-        public int GetSize()
-        {
-            return Size;
-        }
+       
     }
 }
