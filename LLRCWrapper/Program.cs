@@ -53,13 +53,28 @@ namespace QCDMWrapper
                 var p = new Process {StartInfo = {FileName = Fileloc + "RunR.bat"}};
                 p.Start();
 
+				string scriptOutFilePath = Path.Combine(Fileloc, "QCDMscript.r.Rout");
+				bool bAbort = false;
+
                 //Checks to see if the files have been made
                 while (File.Exists(Fileloc + "TestingDataset.csv") == false)
                 {
-                    System.Threading.Thread.Sleep(1000);
+                    System.Threading.Thread.Sleep(5000);
+
+					if (ErrorReportedByR(scriptOutFilePath))
+					{
+						bAbort = true;
+						break;
+					}
                 }
 
-                //Posts the data to the database
+				if (bAbort)
+				{					
+                    Console.ReadKey();
+					return 1;
+				}
+            
+				    //Posts the data to the database
                 var post = new Posting();
                 post.PostToDatabase(size, list, values, fileloc);
 
@@ -79,5 +94,29 @@ namespace QCDMWrapper
             }
 
         }
+
+		static bool ErrorReportedByR(string scriptOutFilePath)
+		{
+			if (File.Exists(scriptOutFilePath))
+			{
+				Console.WriteLine("Check");
+
+				using (StreamReader srOutFile = new StreamReader(new FileStream(scriptOutFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)))
+				{
+					while (srOutFile.Peek() > -1)
+					{
+						string logText = srOutFile.ReadLine();
+						if (logText.Contains("there is no package called 'QCDM'") || logText.Contains("Execution halted"))
+						{
+							Console.WriteLine("Error with R: " + logText);
+							return true;
+						}
+					}
+				}
+
+			}
+
+			return false;
+		}
     }
 }
