@@ -19,7 +19,9 @@ namespace QCDMWrapper
 			}
 		}
 
-		// Constructor
+		/// <summary>
+		/// Constructor
+		/// </summary>
 		public InputCheck()
 		{
 			mDatasetIDList = string.Empty;

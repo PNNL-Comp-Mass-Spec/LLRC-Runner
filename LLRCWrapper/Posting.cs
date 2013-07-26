@@ -9,9 +9,28 @@ namespace QCDMWrapper
 {
 	class Posting
 	{
-		PRISM.DataBase.clsExecuteDatabaseSP _mExecuteSp;
-		public const string CONNECTION_STRING = "Data Source=gigasax;Initial Catalog=DMS5;Integrated Security=SSPI;";
+
+		public const string DEFAULT_CONNECTION_STRING = "Data Source=gigasax;Initial Catalog=DMS5;Integrated Security=SSPI;";
 		public const string STORED_PROCEDURE = "StoreQCDMResults";
+
+		PRISM.DataBase.clsExecuteDatabaseSP _mExecuteSp;
+		protected string mConnectionString;
+
+		/// <summary>
+		/// Constructor
+		/// </summary>
+		public Posting() 
+		{
+			mConnectionString = DEFAULT_CONNECTION_STRING;
+		}
+
+		/// <summary>
+		/// Constructor
+		/// </summary>
+		public Posting(string connectionString)
+		{
+			mConnectionString = connectionString;
+		}
 
 		//Posts the QCDM metric to the database
 		public void PostToDatabase(List<List<string>> lstMetricsByDataset, string outputFolderPath)
@@ -49,7 +68,7 @@ namespace QCDMWrapper
 				Posting po = new Posting();
 
 				//attempts to post to database and returns true or false
-				bool success = po.PostQcdmResultsToDb(intDatasetId, xml, CONNECTION_STRING, STORED_PROCEDURE);
+				bool success = po.PostQcdmResultsToDb(intDatasetId, xml, mConnectionString, STORED_PROCEDURE);
 				if (success)
 				{
 					Console.WriteLine("Successfully posted results for DatasetID " + datasetID + " to the database");
