@@ -17,9 +17,17 @@ namespace LLRC
 		protected string mErrorMessage;
 		protected string mStoredProcedureError;
 
+		protected List<int> mBadDatasetIDs;
 		protected List<string> mErrors;
 
 		#region "Properties"
+		public List<int> BadDatasetIDs
+		{
+			get
+			{
+				return mBadDatasetIDs;
+			}
+		}
 		public List<string> Errors
 		{
 			get 
@@ -44,7 +52,10 @@ namespace LLRC
 		{
 			mConnectionString = connectionString;
 			mErrorMessage = string.Empty;
+			
+			mBadDatasetIDs = new List<int>();
 			mErrors = new List<string>();
+
 		}
 
 		/// <summary>
@@ -52,15 +63,17 @@ namespace LLRC
 		/// </summary>
 		/// <param name="lstMetricsByDataset"></param>
 		/// <param name="lstValidDatasetIDs"></param>
-		/// <param name="outputFolderPath"></param>
+		/// <param name="workingDirPath"></param>
 		/// <returns>True if success, false if an error</returns>
 		/// <remarks>Use the Errors property of this class to view any errors</remarks>
-		public bool PostToDatabase(List<List<string>> lstMetricsByDataset, SortedSet<int> lstValidDatasetIDs, string outputFolderPath)
+		public bool PostToDatabase(List<List<string>> lstMetricsByDataset, SortedSet<int> lstValidDatasetIDs, string workingDirPath)
 		{
 			// Cache the QCDMResults
-			Dictionary<int, string> dctResults = CacheQCDMResults(outputFolderPath);
+			Dictionary<int, string> dctResults = CacheQCDMResults(workingDirPath);
 
 			Console.WriteLine();
+			
+			mBadDatasetIDs.Clear();
 			mErrors.Clear();
 
 			foreach (List<string> metricsOneDataset in lstMetricsByDataset)
@@ -95,12 +108,14 @@ namespace LLRC
 				}
 				else
 				{
+					mBadDatasetIDs.Add(datasetID);
+
 					Console.WriteLine("  Error posting results: " + mErrorMessage);
 					if (string.IsNullOrEmpty(mStoredProcedureError))
 						mErrors.Add(mErrorMessage);
 					else
 						mErrors.Add(mErrorMessage + "; " + mStoredProcedureError);
-					
+
 				}
 			
 			}
@@ -112,9 +127,9 @@ namespace LLRC
 		}
 
 		//gets the QCDM value from the .csv file that is created from the R program
-		public Dictionary<int, string> CacheQCDMResults(string outputFolderPath)
+		public Dictionary<int, string> CacheQCDMResults(string workingDirPath)
 		{
-			string resultsFilePath = Path.Combine(outputFolderPath, "TestingDataset.csv");
+			string resultsFilePath = Path.Combine(workingDirPath, "TestingDataset.csv");
 			Dictionary<int, string> results = new Dictionary<int, string>();
 
 			if (!File.Exists(resultsFilePath))

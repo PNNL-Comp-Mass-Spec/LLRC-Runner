@@ -25,7 +25,11 @@ namespace LLRCRunner
 
 		protected static string mDatasetIDList;
 		protected static string mWorkingDirectory;
+
+		protected static int mMaxResultsToDisplay;		// Only used if mPostToDB is false
 		protected static bool mPostToDB;
+
+		protected static bool mSkipAlreadyProcessedDatasets;
 
         public static int Main(string[] args)
         {
@@ -34,7 +38,9 @@ namespace LLRCRunner
 
 			mDatasetIDList = string.Empty;
 			mWorkingDirectory = string.Empty;
+			mMaxResultsToDisplay = 10;
 			mPostToDB = false;
+			mSkipAlreadyProcessedDatasets = false;
 
             try
             {
@@ -58,9 +64,10 @@ namespace LLRCRunner
 				else 
 				{
 					string errorMessage;
+					bool processingTimespan;
 
 					// Parse the dataset ID list
-					List<int> lstDatasetIDs = LLRC.LLRCWrapper.ParseDatasetIDList(mDatasetIDList, out errorMessage);
+					List<int> lstDatasetIDs = LLRC.LLRCWrapper.ParseDatasetIDList(mDatasetIDList, CONNECTION_STRING, out errorMessage, out processingTimespan);
 
 					if (lstDatasetIDs.Count == 0)
 					{
@@ -72,7 +79,11 @@ namespace LLRCRunner
 
 					LLRC.LLRCWrapper oProcessingClass = new LLRC.LLRCWrapper();
 
+					oProcessingClass.MaxResultsToDisplay = mMaxResultsToDisplay;
 					oProcessingClass.PostToDB = mPostToDB;
+					oProcessingClass.SkipAlreadyProcessedDatasets = mSkipAlreadyProcessedDatasets;
+					oProcessingClass.ProcessingTimespan = processingTimespan;
+
 					if (!string.IsNullOrWhiteSpace(mWorkingDirectory))
 						oProcessingClass.WorkingDirectory = mWorkingDirectory;
 
@@ -105,7 +116,8 @@ namespace LLRCRunner
             // Returns True if no problems; otherwise, returns false
 
             string strValue = string.Empty;
-            List<string> lstValidParameters = new List<string> {"I", "W", "DB"};
+			int intValue;
+            List<string> lstValidParameters = new List<string> {"I", "W", "DB", "Skip", "Display"};
 
             try
             {
@@ -145,6 +157,19 @@ namespace LLRCRunner
                             mPostToDB = true;
                         }
 
+						if (objParseCommandLine.IsParameterPresent("Skip"))
+						{
+							mSkipAlreadyProcessedDatasets = true;
+						}
+
+						 if (objParseCommandLine.RetrieveValueForParameter("Display", out strValue))
+                        {
+
+							if (int.TryParse(strValue, out intValue))
+								mMaxResultsToDisplay = intValue;
+                        }
+                       
+						
 					
                     }
 
@@ -209,11 +234,13 @@ namespace LLRCRunner
 				Console.WriteLine(" DatasetIDList [/W:WorkingDirectory] [/DB]");
 
 				Console.WriteLine();
-				Console.WriteLine("DatasetIDList can be a single DatasetID, a list of DatasetIDs separated by commas, or a range of DatasetIDs separated with a dash.  Examples:");
-				Console.WriteLine(" " + exeName + " 325145");
-				Console.WriteLine(" " + exeName + " 325145,325146,325150");
-				Console.WriteLine(" " + exeName + " 325145-325150");
-			
+				Console.WriteLine("DatasetIDList can be a single DatasetID, a list of DatasetIDs separated by commas, a range of DatasetIDs separated with a dash, or a timespan in hours.  Examples:");
+				Console.WriteLine(" " + exeName + " 325145                 (will process 1 dataset)");
+				Console.WriteLine(" " + exeName + " 325145,325146,325150   (will process 3 datasets)");
+				Console.WriteLine(" " + exeName + " 325145-325150          (will process 6 dataset)");
+				Console.WriteLine(" " + exeName + " 24h                    (will process all new datasets created in the last 24 hours)");
+				Console.WriteLine();
+				Console.WriteLine("\"New\" datasets are those with null QCDM values in the T_Dataset_QC table");
 				Console.WriteLine();
 				Console.WriteLine("Use /W to specify the working directory path; default is the folder with the .exe");
 				Console.WriteLine("The working directory must have files " + LLRC.LLRCWrapper.RDATA_FILE_MODELS + " and " + LLRC.LLRCWrapper.RDATA_FILE_ALLDATA);

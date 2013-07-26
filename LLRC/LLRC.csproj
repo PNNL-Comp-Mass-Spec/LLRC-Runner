@@ -48,7 +48,7 @@
     <Compile Include="WriteFiles.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="allData_v3.Rdata">
+    <None Include="allData_v4.Rdata">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="Models_paper.Rdata">

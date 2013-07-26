@@ -115,8 +115,9 @@ namespace LLRC
 		/// Retrieves Data from database for the given datasetIDs
         /// </summary>
         /// <param name="datasetIDs"></param>
+		/// <param name="skipAlreadyProcessedDatasets">Set to True to skip DatasetIDs that already have a QCDM value</param>
         /// <returns></returns>
-        public List<List<string>> GetData(List<int> datasetIDs)
+		public List<List<string>> GetData(List<int> datasetIDs, bool skipAlreadyProcessedDatasets)
         {
 			const int CHUNK_SIZE = 500;
 
@@ -127,6 +128,10 @@ namespace LLRC
 			// Open the database connection
 			if (!Open())
 				return new List<List<string>>();
+
+			DateTime dtStartTime = DateTime.UtcNow;
+			DateTime dtLastProgress = DateTime.UtcNow;
+			bool showProgress = false;
 
 			// Process the datasets in chunks, 500 datasets at a time
 			for (int i = 0; i < datasetIDs.Count; i += CHUNK_SIZE)
@@ -146,8 +151,7 @@ namespace LLRC
 				{
 					// Uses are massive SQL command to get the data to come out in the order we want it too
 					// If you add/remove columns, you must update the iWriteFiles.WriteCsv
-					SqlCommand command = new SqlCommand(
-					 "SELECT M.[Instrument Group], M.[Dataset_ID], [Instrument], [Dataset], [XIC_WideFrac]" +
+					string sqlQuery = "SELECT M.[Instrument Group], M.[Dataset_ID], [Instrument], [Dataset], [XIC_WideFrac]" +
 					 ", [MS1_TIC_Change_Q2], [MS1_TIC_Q2], [MS1_Density_Q1], [MS1_Density_Q2], [MS2_Density_Q1], [DS_2A], [DS_2B], [MS1_2B]" +
 					 ", [P_2A], [P_2B], [P_2C], [SMAQC_Job], [Quameter_Job], [XIC_FWHM_Q1], [XIC_FWHM_Q2], [XIC_FWHM_Q3], [XIC_Height_Q2], [XIC_Height_Q3]" +
 					 ", [XIC_Height_Q4], [RT_Duration], [RT_TIC_Q1], [RT_TIC_Q2], [RT_TIC_Q3], [RT_TIC_Q4], [RT_MS_Q1], [RT_MS_Q2], [RT_MS_Q3], [RT_MS_Q4]" +
@@ -157,17 +161,20 @@ namespace LLRC
 					 ", [C_1A], [C_1B], [C_2A], [C_2B], [C_3A], [C_3B], [C_4A], [C_4B], [C_4C], [DS_1A], [DS_1B], [DS_3A], [DS_3B], [IS_1A], [IS_1B], [IS_2], [IS_3A]" +
 					 ", [IS_3B], [IS_3C], [MS1_1], [MS1_2A], [MS1_3A], [MS1_3B], [MS1_5A], [MS1_5B], [MS1_5C], [MS1_5D], [MS2_1], [MS2_2], [MS2_3], [MS2_4A]" +
 					 ", [MS2_4B], [MS2_4C], [MS2_4D], [P_1A], [P_1B], [P_3], [Smaqc_Last_Affected], [PSM_Source_Job]" +
-					 "FROM [V_Dataset_QC_Metrics] M INNER JOIN [T_Dataset]" +
-					 "ON M.[Dataset_ID] = [T_Dataset].[Dataset_ID]" +
-					 "WHERE [T_Dataset].[DS_sec_sep] NOT LIKE 'LC-Agilent-2D-Formic%'" +
-					 "AND M.[Dataset_ID] IN (" + sbDatasets.ToString() + ")", mConnection);
+					 " FROM [V_Dataset_QC_Metrics] M INNER JOIN [T_Dataset] ON M.[Dataset_ID] = [T_Dataset].[Dataset_ID]" +
+					 " WHERE [T_Dataset].[DS_sec_sep] NOT LIKE 'LC-Agilent-2D-Formic%'" +
+					 " AND M.[Dataset_ID] IN (" + sbDatasets.ToString() + ")";
+
+					if (skipAlreadyProcessedDatasets)
+						sqlQuery += " AND M.QCDM Is Null";
+
+					SqlCommand command = new SqlCommand(sqlQuery, mConnection);
 
 					SqlDataReader drReader = command.ExecuteReader();
 
-					//If the sql command doesnt find anything
 					if (drReader.HasRows)
 					{
-						// Gets the data from the results and adds them to the list
+						// Append the data to lstMetricsByDataset
 						// Converts empty values to NA
 						while (drReader.Read())
 						{
@@ -185,6 +192,14 @@ namespace LLRC
 								{
 									lstMetrics.Add(string.IsNullOrWhiteSpace(GetColumnString(drReader, j)) ? "NA" : drReader[j].ToString());
 								}
+
+								// Temp Hack due to bug in the R code
+								if (lstMetrics[MetricColumnIndex.P_2A] == "0")
+								{
+									Console.WriteLine("  Note: Auto-updated P_2A from 0 to 1 for DatasetID " + datasetID);
+									lstMetrics[MetricColumnIndex.P_2A] = "1";
+								}
+
 								lstMetricsByDataset.Add(lstMetrics);
 							}
 						}
@@ -198,17 +213,38 @@ namespace LLRC
 					mErrorMessage = "Error obtaining QC Metric values: " + ex.Message;
 					return new List<List<string>>();
 				}
+
+				if (DateTime.UtcNow.Subtract(dtStartTime).TotalSeconds >= 1 && i + CHUNK_SIZE < datasetIDs.Count)
+					showProgress = true;
+
+				if (showProgress && DateTime.UtcNow.Subtract(dtLastProgress).TotalMilliseconds >= 333)
+				{
+					double percentComplete = (i + CHUNK_SIZE) / (double)datasetIDs.Count * 100;
+					Console.WriteLine("Retrieving metrics from the database: " + percentComplete.ToString("0.0") + "% complete");
+					dtLastProgress = DateTime.UtcNow;
+				}
 			}
 
 			// Look for datasets for which metrics were not available
+			int warnCount = 0;
 			foreach (int datasetID in datasetIDs)
             {
 				if (!datasetIDsWithMetrics.Contains(datasetID))
-					Console.WriteLine("Warning: DatasetID does not have QC Metrics: " + datasetID);
+				{
+					warnCount += 1;
+					if (warnCount <= 10)
+						Console.WriteLine("Warning: DatasetID does not have QC Metrics: " + datasetID);
+					
+				}
             }
+
+			if (warnCount > 10)
+				Console.WriteLine(" ... " + (warnCount - 10).ToString() + " additional warnings not shown");
 
 			if (datasetIDs.Count > 1)
 				Console.WriteLine("\nRetrieved dataset metrics for " + lstMetricsByDataset.Count + " / " + datasetIDs.Count + " datasets");
+
+			Console.WriteLine();
 
 			// Close connection
 			Close();

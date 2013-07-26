@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Data.SqlClient;
 using System.Text;
 
 namespace LLRC
@@ -11,11 +12,15 @@ namespace LLRC
 		public const string PROGRAM_DATE = "July 26, 2013";
 
 		public const string RDATA_FILE_MODELS = "Models_paper.Rdata";
-		public const string RDATA_FILE_ALLDATA = "allData_v3.Rdata";
+		public const string RDATA_FILE_ALLDATA = "allData_v4.Rdata";
 
 		protected string mConnectionString;
 		protected string mWorkingDirPath;
+
+		protected int mMaxResultsToDisplay;			// Only used if mPostToDB is false
 		protected bool mPostToDB;
+		protected bool mProcessingTimespan;			// Set this to True if processing a set of DataseIDs from a timespan; when this is true, the code will not report an error if none of the datasets has valid metrics
+		protected bool mSkipAlreadyProcessedDatasets;
 
 		protected string mErrorMessage;
 
@@ -28,6 +33,17 @@ namespace LLRC
 			}
 		}
 
+		public int MaxResultsToDisplay
+		{
+			get
+			{
+				return mMaxResultsToDisplay;
+			}
+			set
+			{
+				mMaxResultsToDisplay = value;
+			}
+		}
 		public bool PostToDB
 		{
 			get
@@ -37,6 +53,29 @@ namespace LLRC
 			set
 			{
 				mPostToDB = value;
+			}
+		}
+		public bool ProcessingTimespan
+		{
+			get
+			{
+				return mProcessingTimespan;
+			}
+			set
+			{
+				mProcessingTimespan = value;
+			}
+		}
+		
+		public bool SkipAlreadyProcessedDatasets
+		{
+			get
+			{
+				return mSkipAlreadyProcessedDatasets;
+			}
+			set
+			{
+				mSkipAlreadyProcessedDatasets = value;
 			}
 		}
 
@@ -74,6 +113,54 @@ namespace LLRC
 				mConnectionString = connectionString;
 
 			mWorkingDirPath = GetAppFolderPath();
+
+			mMaxResultsToDisplay = 10;
+			mPostToDB = false;
+			ProcessingTimespan = false;
+			mSkipAlreadyProcessedDatasets = false;
+		}
+
+		/// <summary>
+		/// Looks for datasets with entries in T_Dataset_QC where Quameter_Last_Affected or Last_Affected are within the last x hours, while QCDM is null
+		/// </summary>
+		/// <param name="hours"></param>
+		/// <returns></returns>
+		protected static List<int> FindRecentNewDatasets(int hours, string connectionString)
+		{
+			List<int> datasetIDs = new List<int>();
+
+			try
+			{
+				using (SqlConnection connection = new SqlConnection(connectionString))
+				{
+					connection.Open();
+
+					SqlCommand command = new SqlCommand(
+						 " SELECT Dataset_ID" +
+						 " FROM T_Dataset_QC" +
+						 " WHERE (QCDM IS NULL) AND (DATEDIFF(hour, Quameter_Last_Affected, GETDATE()) < 24 OR" +
+												   " DATEDIFF(hour, Last_Affected, GETDATE()) < 24)", connection);
+
+					using (SqlDataReader drReader = command.ExecuteReader())
+					{
+						if (drReader.HasRows)
+						{
+							while (drReader.Read())
+							{
+								int datasetID = drReader.GetInt32(0);
+								datasetIDs.Add(datasetID);
+							}
+						}
+					}
+				}
+
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine("Exception in FindRecentNewDatasets: " + ex.Message);
+			}
+
+			return datasetIDs;
 		}
 
 		/// <summary>
@@ -119,7 +206,7 @@ namespace LLRC
 
 			return datasetID;
 		}
-			
+
 
 		/// <summary>
 		/// Reads the R Output file to look for errors
@@ -156,18 +243,20 @@ namespace LLRC
 			return false;
 		}
 
-
-
 		/// <summary>
 		/// Parses the DatasetID list or range into a valid list of DatasetIDs
 		/// </summary>
+		/// <param name="datasetIDList">Dataset ID List or range; alternatively, a timespan in number of hours (e.g. 24h)</param>
+		/// <param name="errorMessage">Error message (output parameter)</param>
 		/// <returns>True if success; false if an error or no Dataset IDs</returns>
-		public static List<int> ParseDatasetIDList(string datasetIDList, out string errorMessage)
+		public static List<int> ParseDatasetIDList(string datasetIDList, string connectionString, out string errorMessage, out bool processingTimespan)
 		{
 			List<int> lstDatasetIDs = new List<int>();
 			int value;
 
+			datasetIDList = datasetIDList.Trim();
 			errorMessage = string.Empty;
+			processingTimespan = false;
 
 			if (string.IsNullOrWhiteSpace(datasetIDList))
 			{
@@ -229,8 +318,33 @@ namespace LLRC
 					return new List<int>();
 				}
 
-				lstDatasetIDs.AddRange(System.Linq.Enumerable.Range(datasetIDStart, datasetIDEnd - datasetIDStart));
+				if (datasetIDEnd == datasetIDStart)
+					lstDatasetIDs.Add(datasetIDStart);
+				else
+					lstDatasetIDs.AddRange(System.Linq.Enumerable.Range(datasetIDStart, datasetIDEnd - datasetIDStart));
+
 				return lstDatasetIDs;
+			}
+
+			if (datasetIDList.EndsWith("h"))
+			{
+				// Timespan
+				int hours;
+				if (int.TryParse(datasetIDList.Substring(0, datasetIDList.Length - 1), out hours))
+				{
+					lstDatasetIDs = FindRecentNewDatasets(hours, connectionString);
+					processingTimespan = true;
+
+					if (lstDatasetIDs.Count == 0)
+						errorMessage = "No new datasets found with new QC values from the last " + hours + " hours";
+
+					return lstDatasetIDs;
+				}
+				else
+				{
+					errorMessage = "Timespan must be of the form \"24h\" or similar: " + datasetIDList;
+					return new List<int>();
+				}
 			}
 
 			if (int.TryParse(datasetIDList, out value))
@@ -240,12 +354,12 @@ namespace LLRC
 			}
 			else
 			{
-				errorMessage = "DatasetIDList must contain an integer, a list of integers, or a range of integers: " + datasetIDList;
+				errorMessage = "DatasetIDList must contain an integer, a list of integers, a range of integers, or a number of hours: " + datasetIDList;
 				return new List<int>();
 			}
 
 		}
-       
+
 		/// <summary>
 		/// Processes the Dataset IDs in lstDatasetIDs
 		/// </summary>
@@ -275,15 +389,17 @@ namespace LLRC
 				// Get the data from the database about the dataset Ids
 				DatabaseMang db = new DatabaseMang();
 
-				List<List<string>> lstMetricsByDataset = db.GetData(lstDatasetIDs);
-			
-
+				List<List<string>> lstMetricsByDataset = db.GetData(lstDatasetIDs, mSkipAlreadyProcessedDatasets);
 
 				//Checks to see if we have any datasets
 				if (lstMetricsByDataset.Count == 0)
 				{
 					mErrorMessage = "No Metrics were found for the given Datasets IDs";
-					return false;
+
+					if (mProcessingTimespan)
+						return true;
+					else
+						return false;
 				}
 
 				//Deletes Old files so they dont interfere with new ones
@@ -303,7 +419,10 @@ namespace LLRC
 					else
 						mErrorMessage = "All of the datasets were missing 1 or more required metrics; unable to run LLRC";
 
-					return false;
+					if (mProcessingTimespan)
+						return true;
+					else
+						return false;
 				}
 
 				bool success = RunLLRC(mWorkingDirPath, lstValidDatasetIDs.Count);
@@ -314,32 +433,84 @@ namespace LLRC
 					return false;
 				}
 
-				if (mPostToDB)
+				if (!mPostToDB)
 				{
-					//Posts the data to the database
-					Posting post = new Posting(mConnectionString);
-					success = post.PostToDatabase(lstMetricsByDataset, lstValidDatasetIDs, mWorkingDirPath);
+					// Display the results
+					Posting post = new Posting();
+					Dictionary<int, string> dctResults = post.CacheQCDMResults(mWorkingDirPath);
+					int datasetCountDisplayed = 0;
 
-					if (!success)
+					// Display results for the first 10 datasets
+					Console.WriteLine();
+					Console.WriteLine("Results:");
+					foreach (var item in dctResults)
 					{
-						if (post.Errors.Count == 0)
+						Console.WriteLine("DatasetID " + item.Key + ": " + item.Value);
+						datasetCountDisplayed += 1;
+						if (datasetCountDisplayed >= mMaxResultsToDisplay)
 						{
-							mErrorMessage = "Unknown error posting results to the database";
+							Console.WriteLine("Results for " + (dctResults.Count - datasetCountDisplayed).ToString() + " additional datasets not displayed");
+							break;
+						}
+					}
+				}
+				else
+				{
+					// Post to the database
+					// Allow for up to 2 retries
+
+					int retry = 2;
+
+					while (retry > 0)
+					{
+						// Wait 1 second to let R close
+						System.Threading.Thread.Sleep(333);
+						PRISM.Processes.clsProgRunner.GarbageCollectNow();
+
+						Posting post = new Posting(mConnectionString);
+						success = post.PostToDatabase(lstMetricsByDataset, lstValidDatasetIDs, mWorkingDirPath);
+
+						if (success)
+						{
+							retry = 0;
 						}
 						else
 						{
-							foreach (string error in post.Errors)
+							retry -= 1;
+							if (post.Errors.Count == 0)
 							{
-								if (string.IsNullOrEmpty(mErrorMessage))
-									mErrorMessage = string.Copy(error);
-								else
-									mErrorMessage += "; " + error;
+								mErrorMessage = "Unknown error posting results to the database";
 							}
+							else
+							{
+								foreach (string error in post.Errors)
+								{
+									if (string.IsNullOrEmpty(mErrorMessage))
+										mErrorMessage = string.Copy(error);
+									else
+										mErrorMessage += "; " + error;
+								}
+							}
+
 						}
 
-						return false;
+						if (post.BadDatasetIDs.Count > 0)
+						{
+							StringBuilder sbBadDatasetIDs = new StringBuilder();
+							foreach (int datasetID in post.BadDatasetIDs)
+							{
+								if (sbBadDatasetIDs.Length > 0)
+									sbBadDatasetIDs.Append(", ");
+								sbBadDatasetIDs.Append(datasetID);
+							}
+
+							Console.WriteLine("Dataset IDs for which LLRC could not compute a QCDM result: " + sbBadDatasetIDs.ToString());
+						}
 					}
-						
+
+					if (!success)
+						return false;
+
 				}
 
 			}
@@ -375,6 +546,7 @@ namespace LLRC
 			FileInfo fiResultsFile = new FileInfo(Path.Combine(WorkingDirPath, "TestingDataset.csv"));
 			bool bAbort = false;
 
+			Console.WriteLine();
 			Console.WriteLine("Starting R to compute LLRC for " + datasetCount + " dataset" + (datasetCount > 1 ? "s" : ""));
 
 			int sleepTimeMsec = 500;
