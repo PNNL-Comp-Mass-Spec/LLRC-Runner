@@ -3,12 +3,19 @@ using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Text.RegularExpressions;
 
-namespace QCDMWrapper
+namespace LLRC
 {
     class DatabaseMang
     {
+		// Old: public const string DEFAULT_CONNECTION_STRING = "user id=dmsreader;password=dms4fun;server=gigasax;Trusted_Connection=yes;database=DMS5;connection timeout=30";
+		// Old: public const string DEFAULT_CONNECTION_STRING = "Persist Security Info=False;Integrated Security=true;Initial Catalog=Northwind;server=gigasax"
+
+		public const string DEFAULT_CONNECTION_STRING = "Data Source=gigasax;Initial Catalog=DMS5;Integrated Security=SSPI;";
+
 		private SqlConnection mConnection;
 		private int mMetricCount;
+
+		protected string mErrorMessage;
 
 		// These column indices are dependent on the query in DatabaseMang.GetData
 		public class MetricColumnIndex
@@ -32,7 +39,16 @@ namespace QCDMWrapper
 			public const int SMAQC_Job = 16;
 			public const int Quameter_Job= 17;
 		}
-	
+
+		#region "Properties"
+		public string ErrorMessge
+		{
+			get
+			{
+				return mErrorMessage;
+			}
+		}
+
 		public int MetricCount
 		{
 			get
@@ -40,45 +56,53 @@ namespace QCDMWrapper
 				return mMetricCount;
 			}
 		}
+		#endregion
 
 		/// <summary>
 		/// Constructor
 		/// </summary>
-		public DatabaseMang() 
+		public DatabaseMang() : this(DEFAULT_CONNECTION_STRING)
 		{
-			mConnection = new SqlConnection("user id=dmsreader;" + "password=dms4fun;" + "server=gigasax;" + "Trusted_Connection=yes;" + "database=DMS5;" + "connection timeout=30");
+		}
+
+		/// <summary>
+		/// Constructor
+		/// </summary>
+		public DatabaseMang(string connectionString)
+		{
+			if (string.IsNullOrEmpty(connectionString))
+				connectionString = DatabaseMang.DEFAULT_CONNECTION_STRING;			
+
+			mConnection = new SqlConnection(connectionString);
+			mErrorMessage = string.Empty;
 		}
 
         //Connection to Database
-        public bool Open()
+        protected bool Open()
         {
             try
             {
                 mConnection.Open();
                 return true;
             }
-            catch (Exception e)
+            catch (Exception ex)
             {
-				Console.WriteLine();
-				Console.WriteLine("Error opening the connection to the database; details:");
-                Console.WriteLine(e);
+				mErrorMessage = "Error opening the connection to the database: " + ex.Message;
                 return false;
             }
         }
 
         //Closes Database
-        public bool Close()
+		protected bool Close()
         {
             try
             {
                 mConnection.Close();
                 return true;
             }
-            catch (Exception e)
+            catch (Exception ex)
 			{
-				Console.WriteLine();
-				Console.WriteLine("Error closing the database connection; details:");
-                Console.WriteLine(e);
+				mErrorMessage = "Error closing the connection to the database: " + ex.Message;
                 return false;
             }
         }
@@ -88,9 +112,14 @@ namespace QCDMWrapper
         {
             var lstMetricsByDataset = new List<List<string>>();
 
+			// Open the database connection
+			if (!Open())
+				return new List<List<string>>();
+
 			foreach (int datasetID in datasetIDs)
             {
 				List<string> lstMetrics = new List<string>();
+
                 try
                 {
                     // Uses are massive SQL command to get the data to come out in the order we want it too
@@ -135,13 +164,16 @@ namespace QCDMWrapper
 
                     read.Close();
                 }
-                catch (Exception e)
+                catch (Exception ex)
                 {
-					Console.WriteLine();
-					Console.WriteLine("Error obtaining QC Metric values for dataset " + datasetID + " ; details:");
-                    Console.WriteLine(e);
+					mErrorMessage = "Error obtaining QC Metric values for dataset " + datasetID + ": " + ex.Message;
+					return new List<List<string>>();
                 }
             }
+
+			// Close connection
+			Close();
+
 			return lstMetricsByDataset;
         }
       

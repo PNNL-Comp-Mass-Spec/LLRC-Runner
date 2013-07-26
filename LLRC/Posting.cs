@@ -5,23 +5,36 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace QCDMWrapper
+namespace LLRC
 {
 	class Posting
 	{
-
-		public const string DEFAULT_CONNECTION_STRING = "Data Source=gigasax;Initial Catalog=DMS5;Integrated Security=SSPI;";
+		
 		public const string STORED_PROCEDURE = "StoreQCDMResults";
 
 		PRISM.DataBase.clsExecuteDatabaseSP _mExecuteSp;
 		protected string mConnectionString;
+		protected string mErrorMessage;
+		protected string mStoredProcedureError;
+
+		protected List<string> mErrors;
+
+		#region "Properties"
+		public List<string> Errors
+		{
+			get 
+			{ 
+				return mErrors; 
+			}
+		}
+		#endregion
 
 		/// <summary>
 		/// Constructor
 		/// </summary>
-		public Posting() 
+		public Posting()
+			: this(DatabaseMang.DEFAULT_CONNECTION_STRING)
 		{
-			mConnectionString = DEFAULT_CONNECTION_STRING;
 		}
 
 		/// <summary>
@@ -30,13 +43,24 @@ namespace QCDMWrapper
 		public Posting(string connectionString)
 		{
 			mConnectionString = connectionString;
+			mErrorMessage = string.Empty;
+			mErrors = new List<string>();
 		}
 
-		//Posts the QCDM metric to the database
-		public void PostToDatabase(List<List<string>> lstMetricsByDataset, string outputFolderPath)
+		/// <summary>
+		/// Posts the QCDM metric to the database
+		/// </summary>
+		/// <param name="lstMetricsByDataset"></param>
+		/// <param name="outputFolderPath"></param>
+		/// <returns>True if success, false if an error</returns>
+		/// <remarks>Use the Errors property of this class to view any errors</remarks>
+		public bool PostToDatabase(List<List<string>> lstMetricsByDataset, string outputFolderPath)
 		{
 			// Cache the QCDMResults
 			Dictionary<int, string> dctResults = CacheQCDMResults(outputFolderPath);
+
+			Console.WriteLine();
+			mErrors.Clear();
 
 			foreach (List<string> metricsOneDataset in lstMetricsByDataset)
 			{
@@ -65,20 +89,28 @@ namespace QCDMWrapper
 				// Create XML for posting to the database
 				var xml = ConvertQcdmtoXml(LLRCPrediction, smaqcJob, quameterJob, datasetName);
 
-				Posting po = new Posting();
-
 				//attempts to post to database and returns true or false
-				bool success = po.PostQcdmResultsToDb(intDatasetId, xml, mConnectionString, STORED_PROCEDURE);
+				bool success = PostQcdmResultsToDb(intDatasetId, xml, mConnectionString, STORED_PROCEDURE);
 				if (success)
 				{
-					Console.WriteLine("Successfully posted results for DatasetID " + datasetID + " to the database");
+					Console.WriteLine("  Successfully posted results");
 				}
 				else
 				{
-					Console.WriteLine("Error posting results for DatasetID " + datasetID + " to the database");
+					Console.WriteLine("  Error posting results: " + mErrorMessage);
+					if (string.IsNullOrEmpty(mStoredProcedureError))
+						mErrors.Add(mErrorMessage);
+					else
+						mErrors.Add(mErrorMessage + "; " + mStoredProcedureError);
+					
 				}
 			
 			}
+
+			if (mErrors.Count == 0)
+				return true;
+			else
+				return false;
 		}
 
 		//gets the QCDM value from the .csv file that is created from the R program
@@ -196,7 +228,7 @@ namespace QCDMWrapper
 		/// <param name="sConnectionString"></param>
 		/// <param name="sStoredProcedure"></param>
 		/// <returns></returns>
-		public bool PostQcdmResultsToDb(int intDatasetId, string sXmlResults, string sConnectionString, string sStoredProcedure)
+		protected bool PostQcdmResultsToDb(int intDatasetId, string sXmlResults, string sConnectionString, string sStoredProcedure)
 		{
 
 			const int maxRetryCount = 3;
@@ -210,10 +242,12 @@ namespace QCDMWrapper
 			System.Data.SqlClient.SqlCommand objCommand;
 
 			bool blnSuccess = false;
+			mErrorMessage = string.Empty;
+			mStoredProcedureError = string.Empty;
 
 			try
 			{
-				Console.WriteLine("Posting QCDM Results to the database (using Dataset ID " + intDatasetId.ToString() + ")");
+				Console.WriteLine("Posting QCDM Results to the database for Dataset ID " + intDatasetId);
 
 				// We need to remove the encoding line from sXMLResults before posting to the DB
 				// This line will look like this:
@@ -261,16 +295,14 @@ namespace QCDMWrapper
 				}
 				else
 				{
-					string message = "Error storing Quameter Results in database, " + sStoredProcedure + " returned " + intResult.ToString();
-					Console.WriteLine(message);
+					mErrorMessage = "Error storing QCDM Results in database for DatasetID " + intDatasetId + ": " + sStoredProcedure + " returned " + intResult.ToString();
 					blnSuccess = false;
 				}
 
 			}
 			catch (System.Exception ex)
 			{
-				Console.WriteLine("Exception storing Quameter Results in database; details");
-				Console.WriteLine(ex);
+				mErrorMessage = "Exception storing QCDM Results in database for DatasetID " + intDatasetId + ": " + ex.Message;
 				blnSuccess = false;
 			}
 			finally
@@ -311,6 +343,7 @@ namespace QCDMWrapper
 
 		private void mExecuteSP_DBErrorEvent(string message)
 		{
+			mStoredProcedureError = message;
 			Console.WriteLine("Stored procedure execution error: " + message);
 		}
 	}

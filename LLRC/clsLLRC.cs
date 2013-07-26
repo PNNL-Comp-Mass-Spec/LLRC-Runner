@@ -4,10 +4,14 @@ using System.IO;
 using System.Linq;
 using System.Text;
 
-namespace QCDMWrapper
+namespace LLRC
 {
-	class LLRC
+	public class LLRCWrapper
 	{
+		public const string PROGRAM_DATE = "July 26, 2013";
+
+		public const string RDATA_FILE_MODELS = "Models_paper.Rdata";
+		public const string RDATA_FILE_ALLDATA = "allData_v3.Rdata";
 
 		protected string mConnectionString;
 		protected string mWorkingDirPath;
@@ -15,6 +19,7 @@ namespace QCDMWrapper
 
 		protected string mErrorMessage;
 
+		#region "Properties"
 		public string ErrorMessage
 		{
 			get
@@ -46,24 +51,25 @@ namespace QCDMWrapper
 				mWorkingDirPath = value;
 			}
 		}
+		#endregion
 
 		/// <summary>
 		/// Constructor
 		/// </summary>
-		public LLRC()
-			: this(Posting.DEFAULT_CONNECTION_STRING)
+		public LLRCWrapper()
+			: this(DatabaseMang.DEFAULT_CONNECTION_STRING)
 		{
 		}
 
 		/// <summary>
 		/// Constructor
 		/// </summary>
-		public LLRC(string connectionString)
+		public LLRCWrapper(string connectionString)
 		{
 			mErrorMessage = string.Empty;
 
 			if (string.IsNullOrEmpty(connectionString))
-				mConnectionString = Posting.DEFAULT_CONNECTION_STRING;
+				mConnectionString = DatabaseMang.DEFAULT_CONNECTION_STRING;
 			else
 				mConnectionString = connectionString;
 
@@ -216,6 +222,7 @@ namespace QCDMWrapper
 		/// </summary>
 		/// <param name="lstDatasetIDs"></param>
 		/// <returns>True if success, otherwise false</returns>
+		/// <remarks>Use property ErrorMessage to view any error messages</remarks>
 		public bool ProcessDatasets(List<int> lstDatasetIDs)
 		{
 			try
@@ -223,8 +230,8 @@ namespace QCDMWrapper
 
 				// Validate that required files are present
 				List<string> lstRequiredFiles = new List<string>();
-				lstRequiredFiles.Add("Models_paper.Rdata");
-				lstRequiredFiles.Add("allData_v3.Rdata");
+				lstRequiredFiles.Add(RDATA_FILE_MODELS);
+				lstRequiredFiles.Add(RDATA_FILE_ALLDATA);
 
 				foreach (string filename in lstRequiredFiles)
 				{
@@ -238,9 +245,10 @@ namespace QCDMWrapper
 				// Open the database
 				// Get the data from the database about the dataset Ids
 				DatabaseMang db = new DatabaseMang();
-				db.Open();
 
 				List<List<string>> lstMetricsByDataset = db.GetData(lstDatasetIDs);
+			
+
 
 				//Checks to see if we have any datasets
 				if (lstMetricsByDataset.Count == 0)
@@ -258,10 +266,11 @@ namespace QCDMWrapper
 				wf.WriteRFile(mWorkingDirPath);
 				wf.WriteBatch(mWorkingDirPath);
 
-				bool success = RunLLRC(mWorkingDirPath);
+				bool success = RunLLRC(mWorkingDirPath, lstMetricsByDataset.Count);
 
 				if (!success)
 				{
+					// mErrorMessage should have a description of the error
 					return false;
 				}
 
@@ -269,11 +278,30 @@ namespace QCDMWrapper
 				{
 					//Posts the data to the database
 					var post = new Posting(mConnectionString);
-					post.PostToDatabase(lstMetricsByDataset, mWorkingDirPath);
+					success = post.PostToDatabase(lstMetricsByDataset, mWorkingDirPath);
+
+					if (!success)
+					{
+						if (post.Errors.Count == 0)
+						{
+							mErrorMessage = "Unknown error posting results to the database";
+						}
+						else
+						{
+							foreach (string error in post.Errors)
+							{
+								if (string.IsNullOrEmpty(mErrorMessage))
+									mErrorMessage = string.Copy(error);
+								else
+									mErrorMessage += "; " + error;
+							}
+						}
+
+						return false;
+					}
+						
 				}
 
-				// Close connection
-				db.Close();
 			}
 
 			//Displays errors if any occur
@@ -291,7 +319,7 @@ namespace QCDMWrapper
 		/// </summary>
 		/// <param name="WorkingDirPath"></param>
 		/// <returns>True if success, false if an error</returns>
-		protected bool RunLLRC(string WorkingDirPath)
+		protected bool RunLLRC(string WorkingDirPath, int datasetCount)
 		{
 
 			string appFolderPath = GetAppFolderPath();
@@ -307,7 +335,7 @@ namespace QCDMWrapper
 			FileInfo fiResultsFile = new FileInfo(Path.Combine(WorkingDirPath, "TestingDataset.csv"));
 			bool bAbort = false;
 
-			Console.WriteLine("Starting R to compute LLRC");
+			Console.WriteLine("Starting R to compute LLRC for " + datasetCount + " dataset" + (datasetCount > 1 ? "s" : ""));
 
 			int sleepTimeMsec = 500;
 
@@ -332,6 +360,9 @@ namespace QCDMWrapper
 				if (!p.HasExited)
 					p.Kill();
 
+				if (string.IsNullOrEmpty(mErrorMessage))
+					mErrorMessage = "Unknown error running R";
+
 				return false;
 			}
 
@@ -340,6 +371,10 @@ namespace QCDMWrapper
 			{
 				mErrorMessage = "R exited without error, but the results file does not exist: " + fiResultsFile.Name + " at " + fiResultsFile.FullName;
 				return false;
+			}
+			else
+			{
+				Console.WriteLine("  LLRC computation complete");
 			}
 
 			return true;

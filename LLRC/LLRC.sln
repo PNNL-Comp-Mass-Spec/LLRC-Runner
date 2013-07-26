@@ -1,9 +1,7 @@
 ﻿
-Microsoft Visual Studio Solution File, Format Version 12.00
+Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LLRCRunner", "LLRCRunner.csproj", "{5472B96F-7C1A-4E23-B90C-ADD4372F535D}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LLRC", "LLRC\LLRC.csproj", "{301C1D85-3D2B-486E-84EA-C958B207EAAC}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LLRC", "LLRC.csproj", "{301C1D85-3D2B-486E-84EA-C958B207EAAC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -11,10 +9,6 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{5472B96F-7C1A-4E23-B90C-ADD4372F535D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{5472B96F-7C1A-4E23-B90C-ADD4372F535D}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{5472B96F-7C1A-4E23-B90C-ADD4372F535D}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{5472B96F-7C1A-4E23-B90C-ADD4372F535D}.Release|Any CPU.Build.0 = Release|Any CPU
 		{301C1D85-3D2B-486E-84EA-C958B207EAAC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{301C1D85-3D2B-486E-84EA-C958B207EAAC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{301C1D85-3D2B-486E-84EA-C958B207EAAC}.Release|Any CPU.ActiveCfg = Release|Any CPU

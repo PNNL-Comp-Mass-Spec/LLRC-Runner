@@ -4,9 +4,9 @@ using System.IO;
 using System.Text;
 using Microsoft.Win32;
 
-namespace QCDMWrapper
+namespace LLRC
 {
-    class WriteFiles
+	class WriteFiles
     {
         public const string LLR_SCRIPT_NAME = "QCDMscript.r";
 		public string mRProgramPath;
@@ -75,10 +75,10 @@ namespace QCDMWrapper
 				folderPathUnix += '/';
 
 			string contents = "require(QCDM)" + "\n" +
-            "outDataName <- " + '"' + folderPathUnix + "allData_v3.Rdata" + '"' + "\n" +
+			"outDataName <- " + '"' + folderPathUnix + LLRCWrapper.RDATA_FILE_ALLDATA + '"' + "\n" +
             "outputFolder <- " + '"' + folderPathUnix + '"' + "\n" +
 			"ncdataFilename <- " + '"' + folderPathUnix + "data.csv" + '"' + "\n" +
-            "noncuratedPrediction(ncdataFilename=ncdataFilename, modelsFile=paste(outputFolder,\"Models_paper.Rdata\",sep=\"\"), dataFilename=outDataName,outputFolder=outputFolder)";
+			"noncuratedPrediction(ncdataFilename=ncdataFilename, modelsFile=paste(outputFolder,\"" + LLRCWrapper.RDATA_FILE_MODELS + "\",sep=\"\"), dataFilename=outDataName,outputFolder=outputFolder)";
 
 			File.WriteAllText(Path.Combine(outputFolderPath, LLR_SCRIPT_NAME), contents);
         }

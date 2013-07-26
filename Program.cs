@@ -4,7 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Diagnostics;
 
-namespace QCDMWrapper
+namespace LLRCRunner
 {
 	// This program computes the LLRC values for a given set of Smaqc and Quameter values
 	//
@@ -19,12 +19,12 @@ namespace QCDMWrapper
     internal class Program
     {
 
-		public const string PROGRAM_DATE = "July 25, 2013";
+		public const string PROGRAM_DATE = "July 26, 2013";
 
 		protected const string CONNECTION_STRING = "Data Source=gigasax;Initial Catalog=DMS5;Integrated Security=SSPI;";
 
 		protected static string mDatasetIDList;
-		protected static string mOutputFolderPath;
+		protected static string mWorkingDirectory;
 		protected static bool mPostToDB;
 
         public static int Main(string[] args)
@@ -33,7 +33,7 @@ namespace QCDMWrapper
 			bool success = false;
 
 			mDatasetIDList = string.Empty;
-			mOutputFolderPath = string.Empty;
+			mWorkingDirectory = string.Empty;
 			mPostToDB = false;
 
             try
@@ -60,7 +60,7 @@ namespace QCDMWrapper
 					string errorMessage;
 
 					// Parse the dataset ID list
-					List<int> lstDatasetIDs = LLRC.ParseDatasetIDList(mDatasetIDList, out errorMessage);
+					List<int> lstDatasetIDs = LLRC.LLRCWrapper.ParseDatasetIDList(mDatasetIDList, out errorMessage);
 
 					if (lstDatasetIDs.Count == 0)
 					{
@@ -69,12 +69,12 @@ namespace QCDMWrapper
 						ShowProgramHelp();
 						return -2;
 					}
-			
-					LLRC oProcessingClass = new LLRC();
+
+					LLRC.LLRCWrapper oProcessingClass = new LLRC.LLRCWrapper();
 
 					oProcessingClass.PostToDB = mPostToDB;
-					if (!string.IsNullOrWhiteSpace(mOutputFolderPath))
-						oProcessingClass.WorkingDirectory = mOutputFolderPath;
+					if (!string.IsNullOrWhiteSpace(mWorkingDirectory))
+						oProcessingClass.WorkingDirectory = mWorkingDirectory;
 
 					success = oProcessingClass.ProcessDatasets(lstDatasetIDs);
 
@@ -105,7 +105,7 @@ namespace QCDMWrapper
             // Returns True if no problems; otherwise, returns false
 
             string strValue = string.Empty;
-            List<string> lstValidParameters = new List<string> {"I", "O", "DB"};
+            List<string> lstValidParameters = new List<string> {"I", "W", "DB"};
 
             try
             {
@@ -135,9 +135,9 @@ namespace QCDMWrapper
                             mDatasetIDList = objParseCommandLine.RetrieveNonSwitchParameter(0);
                         }
 
-                        if (objParseCommandLine.RetrieveValueForParameter("O", out strValue))
+                        if (objParseCommandLine.RetrieveValueForParameter("W", out strValue))
                         {
-                            mOutputFolderPath = string.Copy(strValue);
+                            mWorkingDirectory = string.Copy(strValue);
                         }
                        
                         if (objParseCommandLine.IsParameterPresent("DB"))
@@ -201,11 +201,11 @@ namespace QCDMWrapper
 
             try
             {
-                Console.WriteLine("This program monitors folders where Sciex .wiff files are being " + "acquired to watch for the creation of a .wiff.scan file followed by the " + "creation of a .wiff file.  Once both files exist, it will monitor " + "the files to wait until they do not change in size for at least " + "30 minutes. After this, it will copy the files to a target folder, " + "creating a subfolder for the pair of files.");
+                Console.WriteLine("This program uses LLRC to compute the QCDM value using QC Metric values from Quameter and Smaqc.");
                 Console.WriteLine();
                 Console.WriteLine("Program syntax:" + Environment.NewLine + exeName);
 
-				Console.WriteLine(" DatasetIDList [/O:OutputFolderPath] [/DB]");
+				Console.WriteLine(" DatasetIDList [/W:WorkingDirectory] [/DB]");
 
 				Console.WriteLine();
 				Console.WriteLine("DatasetIDList can be a single DatasetID, a list of DatasetIDs separated by commas, or a range of DatasetIDs separated with a dash.  Examples:");
@@ -214,9 +214,12 @@ namespace QCDMWrapper
 				Console.WriteLine(" " + exeName + " 325145-325150");
 			
 				Console.WriteLine();
-				Console.WriteLine("Use /O to specify the output folder; default is the folder with the .exe");
+				Console.WriteLine("Use /W to specify the working directory path; default is the folder with the .exe");
+				Console.WriteLine("The working directory must have files " + LLRC.LLRCWrapper.RDATA_FILE_MODELS + " and " + LLRC.LLRCWrapper.RDATA_FILE_ALLDATA);
+				Console.WriteLine();
 				Console.WriteLine("Use /DB to post the LLRC results to the database");
 				
+				Console.WriteLine();
                 Console.WriteLine("Program written by Joshua Davis and Matthew Monroe for the Department of Energy (PNNL, Richland, WA) in 2013");
                 Console.WriteLine("Version: " + GetAppVersion());
                 Console.WriteLine();
