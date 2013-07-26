@@ -174,7 +174,7 @@ namespace LLRC
                 {
 					validInstrumentGroup = true;
 					dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.XIC_WideFrac, "XIC_WideFrac");
-					dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.MS2_Density_Q1, "MS2_Density_Q1");
+					dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.MS2_Density_Q1, "MS2_4B");
 					dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.P_2C, "P_2C");
 
 					validMetrics = AppendToCsv("LTQ_IonTrap", metricsOneDataset, dctRequiredValues, showWarning, ref sb);
@@ -189,32 +189,32 @@ namespace LLRC
 					validMetrics = AppendToCsv("Exactive", metricsOneDataset, dctRequiredValues, showWarning, ref sb);
                 }
 
-                if (instrumentGroup.Equals("LTQ-FT") || instrumentGroup.Equals("Orbitrap") || instrumentGroup.Equals("QExactive"))
+                if (instrumentGroup.Equals("LTQ-FT") || instrumentGroup.Equals("Orbitrap"))
                 {
 					validInstrumentGroup = true;
 					dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.XIC_WideFrac, "XIC_WideFrac");
+					dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.XIC_Height_Q4, "XIC_Height_Q4");
 					dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.MS1_TIC_Change_Q2, "MS1_TIC_Change_Q2");
-					dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.MS1_TIC_Q2, "MS1_TIC_Q2");
-					dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.MS1_Density_Q1, "MS1_Density_Q1");
 					dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.MS1_Density_Q2, "MS1_Density_Q2");
+					dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.DS_1A, "DS_1A");
 					dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.DS_2A, "DS_2A");
+					dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.IS_1A, "IS_1A");
+					dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.IS_3A, "IS_3A");
+					dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.MS2_1, "MS2_1");
+					dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.MS2_4A, "MS2_4A");
+					dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.MS2_4B, "MS2_4B");
 					dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.P_2B, "P_2B");
-					dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.P_2A, "P_2A");
-					dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.DS_2B, "DS_2B");
 
 					validMetrics = AppendToCsv("Orbitrap", metricsOneDataset, dctRequiredValues, showWarning, ref sb);
                 }
 
-                if (instrumentGroup.Equals("VelosOrbi"))
+				if (instrumentGroup.Equals("VelosOrbi") || instrumentGroup.Equals("QExactive"))
                 {
 					validInstrumentGroup = true;
 					dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.XIC_WideFrac, "XIC_WideFrac");
-					dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.MS2_Density_Q1, "MS2_Density_Q1");
-					dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.MS1_2B, "MS1_2B");
-					dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.MS1_Density_Q1, "MS1_Density_Q1");
+					dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.MS2_4A, "MS2_4A");
+					dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.MS2_4B, "MS2_4B");
 					dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.P_2B, "P_2B");
-					dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.P_2A, "P_2A");
-					dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.DS_2B, "DS_2B");
 
 					validMetrics = AppendToCsv("VOrbitrap", metricsOneDataset, dctRequiredValues, showWarning, ref sb);
                 }

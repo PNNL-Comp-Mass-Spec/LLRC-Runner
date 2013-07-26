@@ -37,6 +37,13 @@ namespace LLRC
 			public const int P_2C = 15;
 			public const int SMAQC_Job = 16;
 			public const int Quameter_Job= 17;
+			public const int XIC_Height_Q4 = 23;
+			public const int DS_1A = 66;
+			public const int IS_1A = 70;
+			public const int IS_3A = 73;
+			public const int MS2_1 = 84;
+			public const int MS2_4A = 87;
+			public const int MS2_4B = 88;
 		}
 
 		#region "Properties"
@@ -193,12 +200,14 @@ namespace LLRC
 									lstMetrics.Add(string.IsNullOrWhiteSpace(GetColumnString(drReader, j)) ? "NA" : drReader[j].ToString());
 								}
 
-								// Temp Hack due to bug in the R code
-								if (lstMetrics[MetricColumnIndex.P_2A] == "0")
-								{
-									Console.WriteLine("  Note: Auto-updated P_2A from 0 to 1 for DatasetID " + datasetID);
-									lstMetrics[MetricColumnIndex.P_2A] = "1";
-								}
+								/*
+									// Temp Hack due to bug in the R code
+									if (lstMetrics[MetricColumnIndex.P_2A] == "0")
+									{
+										Console.WriteLine("  Note: Auto-updated P_2A from 0 to 1 for DatasetID " + datasetID);
+										lstMetrics[MetricColumnIndex.P_2A] = "1";
+									}
+								*/
 
 								lstMetricsByDataset.Add(lstMetrics);
 							}
