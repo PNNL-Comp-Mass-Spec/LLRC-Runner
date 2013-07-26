@@ -51,10 +51,11 @@ namespace LLRC
 		/// Posts the QCDM metric to the database
 		/// </summary>
 		/// <param name="lstMetricsByDataset"></param>
+		/// <param name="lstValidDatasetIDs"></param>
 		/// <param name="outputFolderPath"></param>
 		/// <returns>True if success, false if an error</returns>
 		/// <remarks>Use the Errors property of this class to view any errors</remarks>
-		public bool PostToDatabase(List<List<string>> lstMetricsByDataset, string outputFolderPath)
+		public bool PostToDatabase(List<List<string>> lstMetricsByDataset, SortedSet<int> lstValidDatasetIDs, string outputFolderPath)
 		{
 			// Cache the QCDMResults
 			Dictionary<int, string> dctResults = CacheQCDMResults(outputFolderPath);
@@ -65,24 +66,21 @@ namespace LLRC
 			foreach (List<string> metricsOneDataset in lstMetricsByDataset)
 			{
 
-				// Gets all the values out of the list
-				string smaqcJob = metricsOneDataset[(int)DatabaseMang.MetricColumnIndex.SMAQC_Job];
-				string quameterJob = metricsOneDataset[(int)DatabaseMang.MetricColumnIndex.Quameter_Job];
-				string datasetID = metricsOneDataset[(int)DatabaseMang.MetricColumnIndex.DatasetID];
-				string datasetName = metricsOneDataset[(int)DatabaseMang.MetricColumnIndex.DatasetName];
+				int datasetID = LLRCWrapper.GetDatasetIdForMetricRow(metricsOneDataset);
 
-				int intDatasetId;
-				string LLRCPrediction;
-
-				if (!int.TryParse(datasetID, out intDatasetId))
+				if (!lstValidDatasetIDs.Contains(datasetID))
 				{
-					Console.WriteLine("DatasetID is not an integer: " + datasetID);
 					continue;
 				}
 
-				if (!dctResults.TryGetValue(intDatasetId, out LLRCPrediction))
+				string smaqcJob = metricsOneDataset[(int)DatabaseMang.MetricColumnIndex.SMAQC_Job];
+				string quameterJob = metricsOneDataset[(int)DatabaseMang.MetricColumnIndex.Quameter_Job];				
+				string datasetName = metricsOneDataset[(int)DatabaseMang.MetricColumnIndex.DatasetName];
+				string LLRCPrediction;
+
+				if (!dctResults.TryGetValue(datasetID, out LLRCPrediction))
 				{
-					Console.WriteLine("LLRC value not computed for DatasetID " + intDatasetId);
+					Console.WriteLine("LLRC value not computed for DatasetID " + datasetID);
 					continue;
 				}
 
@@ -90,7 +88,7 @@ namespace LLRC
 				var xml = ConvertQcdmtoXml(LLRCPrediction, smaqcJob, quameterJob, datasetName);
 
 				//attempts to post to database and returns true or false
-				bool success = PostQcdmResultsToDb(intDatasetId, xml, mConnectionString, STORED_PROCEDURE);
+				bool success = PostQcdmResultsToDb(datasetID, xml, mConnectionString, STORED_PROCEDURE);
 				if (success)
 				{
 					Console.WriteLine("  Successfully posted results");

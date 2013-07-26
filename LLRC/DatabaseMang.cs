@@ -13,7 +13,6 @@ namespace LLRC
 		public const string DEFAULT_CONNECTION_STRING = "Data Source=gigasax;Initial Catalog=DMS5;Integrated Security=SSPI;";
 
 		private SqlConnection mConnection;
-		private int mMetricCount;
 
 		protected string mErrorMessage;
 
@@ -49,13 +48,6 @@ namespace LLRC
 			}
 		}
 
-		public int MetricCount
-		{
-			get
-			{
-				return mMetricCount;
-			}
-		}
 		#endregion
 
 		/// <summary>
@@ -107,24 +99,54 @@ namespace LLRC
             }
         }
 
-        //Retrieves Data from database on the datasets Ids that were given by user
+		protected string GetColumnString(SqlDataReader drReader, int colIndex)
+		{
+			if (drReader.IsDBNull(colIndex))
+			{
+				return string.Empty;
+			}
+			else
+			{
+				return drReader[colIndex].ToString();
+			}
+
+		}
+        /// <summary>
+		/// Retrieves Data from database for the given datasetIDs
+        /// </summary>
+        /// <param name="datasetIDs"></param>
+        /// <returns></returns>
         public List<List<string>> GetData(List<int> datasetIDs)
         {
-            var lstMetricsByDataset = new List<List<string>>();
+			const int CHUNK_SIZE = 500;
+
+			SortedSet<int> datasetIDsWithMetrics = new SortedSet<int>();
+            List<List<string>> lstMetricsByDataset = new List<List<string>>();
+			System.Text.StringBuilder sbDatasets = new System.Text.StringBuilder();
 
 			// Open the database connection
 			if (!Open())
 				return new List<List<string>>();
 
-			foreach (int datasetID in datasetIDs)
-            {
-				List<string> lstMetrics = new List<string>();
+			// Process the datasets in chunks, 500 datasets at a time
+			for (int i = 0; i < datasetIDs.Count; i += CHUNK_SIZE)
+			{
 
-                try
-                {
-                    // Uses are massive SQL command to get the data to come out in the order we want it too
+				// Construct a comma-separated list of dataset IDs
+				sbDatasets.Clear();
+				for (int j = i; j < i + CHUNK_SIZE && j < datasetIDs.Count; j += 1)
+				{
+					if (sbDatasets.Length > 0)
+						sbDatasets.Append(",");
+
+					sbDatasets.Append(datasetIDs[j]);
+				}
+
+				try
+				{
+					// Uses are massive SQL command to get the data to come out in the order we want it too
 					// If you add/remove columns, you must update the iWriteFiles.WriteCsv
-                    var command = new SqlCommand(
+					SqlCommand command = new SqlCommand(
 					 "SELECT M.[Instrument Group], M.[Dataset_ID], [Instrument], [Dataset], [XIC_WideFrac]" +
 					 ", [MS1_TIC_Change_Q2], [MS1_TIC_Q2], [MS1_Density_Q1], [MS1_Density_Q2], [MS2_Density_Q1], [DS_2A], [DS_2B], [MS1_2B]" +
 					 ", [P_2A], [P_2B], [P_2C], [SMAQC_Job], [Quameter_Job], [XIC_FWHM_Q1], [XIC_FWHM_Q2], [XIC_FWHM_Q3], [XIC_Height_Q2], [XIC_Height_Q3]" +
@@ -138,38 +160,55 @@ namespace LLRC
 					 "FROM [V_Dataset_QC_Metrics] M INNER JOIN [T_Dataset]" +
 					 "ON M.[Dataset_ID] = [T_Dataset].[Dataset_ID]" +
 					 "WHERE [T_Dataset].[DS_sec_sep] NOT LIKE 'LC-Agilent-2D-Formic%'" +
-					 "AND M.[Dataset_ID] = " + datasetID, mConnection);
+					 "AND M.[Dataset_ID] IN (" + sbDatasets.ToString() + ")", mConnection);
 
-                    var read = command.ExecuteReader();
+					SqlDataReader drReader = command.ExecuteReader();
 
-                    //If the sql command doesnt find anything
-                    if (read.HasRows == false)
-                    {
-						Console.WriteLine("Warning: Invalid DatasetID " + datasetID);
-                    }
-                    else
-                    {
-                        // Gets the data from the results and adds them to the list
+					//If the sql command doesnt find anything
+					if (drReader.HasRows)
+					{
+						// Gets the data from the results and adds them to the list
 						// Converts empty values to NA
-                        if (read.Read())
-                        {
-							mMetricCount = read.FieldCount;
-                            for (var j = 0; j < read.FieldCount; j++)
-                            {
-                                lstMetrics.Add(string.IsNullOrWhiteSpace(read[j].ToString()) ? "NA" : read[j].ToString());
-                            }
-                        }
-						lstMetricsByDataset.Add(lstMetrics);
-                    }
+						while (drReader.Read())
+						{
+							int datasetID;
+							if (!int.TryParse(GetColumnString(drReader, 1), out datasetID))
+							{
+								Console.WriteLine("Null dataset ID value found in GetData; this is unexpected");
+							}
+							else
+							{
+								datasetIDsWithMetrics.Add(datasetID);
 
-                    read.Close();
-                }
-                catch (Exception ex)
-                {
-					mErrorMessage = "Error obtaining QC Metric values for dataset " + datasetID + ": " + ex.Message;
+								List<string> lstMetrics = new List<string>();
+								for (int j = 0; j < drReader.FieldCount; j++)
+								{
+									lstMetrics.Add(string.IsNullOrWhiteSpace(GetColumnString(drReader, j)) ? "NA" : drReader[j].ToString());
+								}
+								lstMetricsByDataset.Add(lstMetrics);
+							}
+						}
+
+					}
+
+					drReader.Close();
+				}
+				catch (Exception ex)
+				{
+					mErrorMessage = "Error obtaining QC Metric values: " + ex.Message;
 					return new List<List<string>>();
-                }
+				}
+			}
+
+			// Look for datasets for which metrics were not available
+			foreach (int datasetID in datasetIDs)
+            {
+				if (!datasetIDsWithMetrics.Contains(datasetID))
+					Console.WriteLine("Warning: DatasetID does not have QC Metrics: " + datasetID);
             }
+
+			if (datasetIDs.Count > 1)
+				Console.WriteLine("\nRetrieved dataset metrics for " + lstMetricsByDataset.Count + " / " + datasetIDs.Count + " datasets");
 
 			// Close connection
 			Close();
@@ -177,7 +216,6 @@ namespace LLRC
 			return lstMetricsByDataset;
         }
       
-
     }
 
     

@@ -201,6 +201,7 @@ namespace LLRCRunner
 
             try
             {
+				Console.WriteLine();
                 Console.WriteLine("This program uses LLRC to compute the QCDM value using QC Metric values from Quameter and Smaqc.");
                 Console.WriteLine();
                 Console.WriteLine("Program syntax:" + Environment.NewLine + exeName);

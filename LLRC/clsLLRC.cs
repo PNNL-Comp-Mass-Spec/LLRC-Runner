@@ -76,8 +76,6 @@ namespace LLRC
 			mWorkingDirPath = GetAppFolderPath();
 		}
 
-			
-
 		/// <summary>
 		/// Returns the full path to the folder that contains the currently executing .Exe or .Dll
 		/// </summary>
@@ -97,6 +95,31 @@ namespace LLRC
 		{
 			return System.Reflection.Assembly.GetExecutingAssembly().Location;
 		}
+
+		/// <summary>
+		/// Extracts the DatasetID value from ColIndex 1 in metricsOneDataset
+		/// </summary>
+		/// <param name="metricsOneDataset"></param>
+		/// <returns>The DatasetID as an integer, or 0 if an error</returns>
+		public static int GetDatasetIdForMetricRow(List<string> metricsOneDataset)
+		{
+			int datasetID;
+
+			if (metricsOneDataset == null || metricsOneDataset.Count < DatabaseMang.MetricColumnIndex.DatasetID)
+			{
+				Console.WriteLine("GetDatasetIdForMetricRow: metricsOneDataset is invalid");
+				return 0;
+			}
+
+			if (!int.TryParse(metricsOneDataset[DatabaseMang.MetricColumnIndex.DatasetID], out datasetID))
+			{
+				Console.WriteLine("GetDatasetIdForMetricRow: Dataset ID is not an integer; this is unexpected");
+				return 0;
+			}
+
+			return datasetID;
+		}
+			
 
 		/// <summary>
 		/// Reads the R Output file to look for errors
@@ -200,7 +223,13 @@ namespace LLRC
 					return new List<int>();
 				}
 
-				lstDatasetIDs.AddRange(System.Linq.Enumerable.Range(datasetIDStart, datasetIDEnd));
+				if (datasetIDStart > datasetIDEnd)
+				{
+					errorMessage = "Invalid dataset range, first value is larger than the second value: " + datasetIDList;
+					return new List<int>();
+				}
+
+				lstDatasetIDs.AddRange(System.Linq.Enumerable.Range(datasetIDStart, datasetIDEnd - datasetIDStart));
 				return lstDatasetIDs;
 			}
 
@@ -262,11 +291,22 @@ namespace LLRC
 				//Writes the R file and the batch file to run it
 				WriteFiles wf = new WriteFiles();
 				wf.DeleteFiles(mWorkingDirPath);
-				wf.WriteCsv(lstMetricsByDataset, mWorkingDirPath, db.MetricCount);
+				SortedSet<int> lstValidDatasetIDs = wf.WriteCsv(lstMetricsByDataset, mWorkingDirPath);
+
 				wf.WriteRFile(mWorkingDirPath);
 				wf.WriteBatch(mWorkingDirPath);
 
-				bool success = RunLLRC(mWorkingDirPath, lstMetricsByDataset.Count);
+				if (lstValidDatasetIDs.Count == 0)
+				{
+					if (lstMetricsByDataset.Count == 1)
+						mErrorMessage = "DatasetID " + lstDatasetIDs[0] + " was missing 1 or more required metrics; unable to run LLRC";
+					else
+						mErrorMessage = "All of the datasets were missing 1 or more required metrics; unable to run LLRC";
+
+					return false;
+				}
+
+				bool success = RunLLRC(mWorkingDirPath, lstValidDatasetIDs.Count);
 
 				if (!success)
 				{
@@ -277,8 +317,8 @@ namespace LLRC
 				if (mPostToDB)
 				{
 					//Posts the data to the database
-					var post = new Posting(mConnectionString);
-					success = post.PostToDatabase(lstMetricsByDataset, mWorkingDirPath);
+					Posting post = new Posting(mConnectionString);
+					success = post.PostToDatabase(lstMetricsByDataset, lstValidDatasetIDs, mWorkingDirPath);
 
 					if (!success)
 					{
