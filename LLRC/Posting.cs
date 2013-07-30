@@ -68,57 +68,78 @@ namespace LLRC
 		/// <remarks>Use the Errors property of this class to view any errors</remarks>
 		public bool PostToDatabase(List<List<string>> lstMetricsByDataset, SortedSet<int> lstValidDatasetIDs, string workingDirPath)
 		{
-			// Cache the QCDMResults
-			Dictionary<int, string> dctResults = CacheQCDMResults(workingDirPath);
 
-			Console.WriteLine();
-			
-			mBadDatasetIDs.Clear();
 			mErrors.Clear();
 
-			foreach (List<string> metricsOneDataset in lstMetricsByDataset)
+			try
 			{
+				// Cache the QCDMResults
+				Dictionary<int, string> dctResults = CacheQCDMResults(workingDirPath);
 
-				int datasetID = LLRCWrapper.GetDatasetIdForMetricRow(metricsOneDataset);
-
-				if (!lstValidDatasetIDs.Contains(datasetID))
+				try
 				{
-					continue;
+
+					Console.WriteLine();
+
+					mBadDatasetIDs.Clear();
+					mErrors.Clear();
+
+					foreach (List<string> metricsOneDataset in lstMetricsByDataset)
+					{
+
+						int datasetID = LLRCWrapper.GetDatasetIdForMetricRow(metricsOneDataset);
+
+						if (!lstValidDatasetIDs.Contains(datasetID))
+						{
+							continue;
+						}
+
+						string smaqcJob = metricsOneDataset[(int)DatabaseMang.MetricColumnIndex.SMAQC_Job];
+						string quameterJob = metricsOneDataset[(int)DatabaseMang.MetricColumnIndex.Quameter_Job];
+						string datasetName = metricsOneDataset[(int)DatabaseMang.MetricColumnIndex.DatasetName];
+						string LLRCPrediction;
+
+						if (!dctResults.TryGetValue(datasetID, out LLRCPrediction))
+						{
+							Console.WriteLine("LLRC value not computed for DatasetID " + datasetID);
+							continue;
+						}
+
+						// Create XML for posting to the database
+						var xml = ConvertQcdmtoXml(LLRCPrediction, smaqcJob, quameterJob, datasetName);
+
+						//attempts to post to database and returns true or false
+						bool success = PostQcdmResultsToDb(datasetID, xml, mConnectionString, STORED_PROCEDURE);
+						if (!success)
+						{
+							mBadDatasetIDs.Add(datasetID);
+
+							Console.WriteLine("  Error posting results: " + mErrorMessage);
+							if (string.IsNullOrEmpty(mStoredProcedureError))
+								mErrors.Add(mErrorMessage);
+							else
+								mErrors.Add(mErrorMessage + "; " + mStoredProcedureError);
+
+						}
+
+					}
+				}
+				catch (Exception ex)
+				{
+					mErrors.Add("Exception posting to the database: " + ex.Message);
 				}
 
-				string smaqcJob = metricsOneDataset[(int)DatabaseMang.MetricColumnIndex.SMAQC_Job];
-				string quameterJob = metricsOneDataset[(int)DatabaseMang.MetricColumnIndex.Quameter_Job];				
-				string datasetName = metricsOneDataset[(int)DatabaseMang.MetricColumnIndex.DatasetName];
-				string LLRCPrediction;
-
-				if (!dctResults.TryGetValue(datasetID, out LLRCPrediction))
-				{
-					Console.WriteLine("LLRC value not computed for DatasetID " + datasetID);
-					continue;
-				}
-
-				// Create XML for posting to the database
-				var xml = ConvertQcdmtoXml(LLRCPrediction, smaqcJob, quameterJob, datasetName);
-
-				//attempts to post to database and returns true or false
-				bool success = PostQcdmResultsToDb(datasetID, xml, mConnectionString, STORED_PROCEDURE);
-				if (success)
+				if (mErrors.Count == 0)
 				{
 					Console.WriteLine("  Successfully posted results");
 				}
-				else
-				{
-					mBadDatasetIDs.Add(datasetID);
 
-					Console.WriteLine("  Error posting results: " + mErrorMessage);
-					if (string.IsNullOrEmpty(mStoredProcedureError))
-						mErrors.Add(mErrorMessage);
-					else
-						mErrors.Add(mErrorMessage + "; " + mStoredProcedureError);
-
-				}
-			
 			}
+			catch (Exception ex)
+			{
+				mErrors.Add("Exception caching the results: " + ex.Message);
+			}
+
 
 			if (mErrors.Count == 0)
 				return true;

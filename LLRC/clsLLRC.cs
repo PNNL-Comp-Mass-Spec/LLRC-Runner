@@ -9,7 +9,7 @@ namespace LLRC
 {
 	public class LLRCWrapper
 	{
-		public const string PROGRAM_DATE = "July 26, 2013";
+		public const string PROGRAM_DATE = "July 30, 2013";
 
 		public const string RDATA_FILE_MODELS = "Models_paper.Rdata";
 		public const string RDATA_FILE_ALLDATA = "allData_v4.Rdata";
@@ -318,10 +318,7 @@ namespace LLRC
 					return new List<int>();
 				}
 
-				if (datasetIDEnd == datasetIDStart)
-					lstDatasetIDs.Add(datasetIDStart);
-				else
-					lstDatasetIDs.AddRange(System.Linq.Enumerable.Range(datasetIDStart, datasetIDEnd - datasetIDStart));
+				lstDatasetIDs.AddRange(System.Linq.Enumerable.Range(datasetIDStart, datasetIDEnd - datasetIDStart + 1));
 
 				return lstDatasetIDs;
 			}
@@ -459,7 +456,7 @@ namespace LLRC
 					// Post to the database
 					// Allow for up to 2 retries
 
-					int retry = 2;
+					int retry = 3;
 
 					while (retry > 0)
 					{
@@ -490,6 +487,8 @@ namespace LLRC
 									else
 										mErrorMessage += "; " + error;
 								}
+
+								Console.WriteLine("Error in ProcessDatasets (retry=" + retry + "): " + mErrorMessage);
 							}
 
 						}
