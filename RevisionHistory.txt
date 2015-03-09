@@ -1,4 +1,7 @@
 LLRC Runner Change Log
 
+Version 1.0.5546; March 9, 2015
+	- No longer exiting the program with an error code if processing a time range and no new QC datasets are found
+
 Version 1.0.4955; July 26, 2013
 	- Initial Release

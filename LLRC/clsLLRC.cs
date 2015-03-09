@@ -11,6 +11,8 @@ namespace LLRC
 	{
 		public const string PROGRAM_DATE = "July 30, 2013";
 
+	    public const string NO_NEW_RECENT_DATASETS = "No new datasets found with new QC values from the last";
+
 		public const string RDATA_FILE_MODELS = "Models_paper.Rdata";
 		public const string RDATA_FILE_ALLDATA = "allData_v4.Rdata";
 
@@ -120,22 +122,23 @@ namespace LLRC
 			mSkipAlreadyProcessedDatasets = false;
 		}
 
-		/// <summary>
-		/// Looks for datasets with entries in T_Dataset_QC where Quameter_Last_Affected or Last_Affected are within the last x hours, while QCDM is null
-		/// </summary>
-		/// <param name="hours"></param>
-		/// <returns></returns>
-		protected static List<int> FindRecentNewDatasets(int hours, string connectionString)
+	    /// <summary>
+	    /// Looks for datasets with entries in T_Dataset_QC where Quameter_Last_Affected or Last_Affected are within the last x hours, while QCDM is null
+	    /// </summary>
+	    /// <param name="hours"></param>
+	    /// <param name="connectionString"></param>
+	    /// <returns></returns>
+	    protected static List<int> FindRecentNewDatasets(int hours, string connectionString)
 		{
-			List<int> datasetIDs = new List<int>();
+			var datasetIDs = new List<int>();
 
 			try
 			{
-				using (SqlConnection connection = new SqlConnection(connectionString))
+				using (var connection = new SqlConnection(connectionString))
 				{
 					connection.Open();
 
-					SqlCommand command = new SqlCommand(
+					var command = new SqlCommand(
 						 " SELECT Dataset_ID" +
 						 " FROM T_Dataset_QC" +
 						 " WHERE (QCDM IS NULL) AND (DATEDIFF(hour, Quameter_Last_Affected, GETDATE()) < 24 OR" +
@@ -170,7 +173,7 @@ namespace LLRC
 		public string GetAppFolderPath()
 		{
 			// Could use Application.StartupPath, but .GetExecutingAssembly is better
-			return System.IO.Path.GetDirectoryName(GetAppPath());
+			return Path.GetDirectoryName(GetAppPath());
 		}
 
 		/// <summary>
@@ -218,11 +221,14 @@ namespace LLRC
 			if (File.Exists(scriptOutFilePath))
 			{
 
-				using (StreamReader srOutFile = new StreamReader(new FileStream(scriptOutFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)))
+				using (var srOutFile = new StreamReader(new FileStream(scriptOutFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)))
 				{
 					while (srOutFile.Peek() > -1)
 					{
 						string logText = srOutFile.ReadLine();
+                        if (string.IsNullOrEmpty(logText))
+                            continue;
+
 						if (logText.Contains("there is no package called 'QCDM'") || logText.Contains("Execution halted"))
 						{
 							mErrorMessage = "Error with R: " + logText;
@@ -243,15 +249,17 @@ namespace LLRC
 			return false;
 		}
 
-		/// <summary>
-		/// Parses the DatasetID list or range into a valid list of DatasetIDs
-		/// </summary>
-		/// <param name="datasetIDList">Dataset ID List or range; alternatively, a timespan in number of hours (e.g. 24h)</param>
-		/// <param name="errorMessage">Error message (output parameter)</param>
-		/// <returns>True if success; false if an error or no Dataset IDs</returns>
-		public static List<int> ParseDatasetIDList(string datasetIDList, string connectionString, out string errorMessage, out bool processingTimespan)
+	    /// <summary>
+	    /// Parses the DatasetID list or range into a valid list of DatasetIDs
+	    /// </summary>
+	    /// <param name="datasetIDList">Dataset ID List or range; alternatively, a timespan in number of hours (e.g. 24h)</param>
+	    /// <param name="connectionString"></param>
+	    /// <param name="errorMessage">Output: Error message</param>
+	    /// <param name="processingTimespan">Output: set to true if processing a time span</param>
+	    /// <returns>True if success; false if an error or no Dataset IDs</returns>
+	    public static List<int> ParseDatasetIDList(string datasetIDList, string connectionString, out string errorMessage, out bool processingTimespan)
 		{
-			List<int> lstDatasetIDs = new List<int>();
+			var lstDatasetIDs = new List<int>();
 			int value;
 
 			datasetIDList = datasetIDList.Trim();
@@ -281,7 +289,7 @@ namespace LLRC
 			if (datasetIDList.IndexOf('-') > 0)
 			{
 				// Split datasetIDList on the dash
-				List<string> lstDatasetIDText = datasetIDList.Split('-').ToList<string>();
+				List<string> lstDatasetIDText = datasetIDList.Split('-').ToList();
 
 				if (lstDatasetIDText.Count != 2)
 				{
@@ -318,7 +326,7 @@ namespace LLRC
 					return new List<int>();
 				}
 
-				lstDatasetIDs.AddRange(System.Linq.Enumerable.Range(datasetIDStart, datasetIDEnd - datasetIDStart + 1));
+				lstDatasetIDs.AddRange(Enumerable.Range(datasetIDStart, datasetIDEnd - datasetIDStart + 1));
 
 				return lstDatasetIDs;
 			}
@@ -333,15 +341,13 @@ namespace LLRC
 					processingTimespan = true;
 
 					if (lstDatasetIDs.Count == 0)
-						errorMessage = "No new datasets found with new QC values from the last " + hours + " hours";
+						errorMessage = NO_NEW_RECENT_DATASETS + " " + hours + " hours";
 
 					return lstDatasetIDs;
 				}
-				else
-				{
-					errorMessage = "Timespan must be of the form \"24h\" or similar: " + datasetIDList;
-					return new List<int>();
-				}
+			    
+                errorMessage = "Timespan must be of the form \"24h\" or similar: " + datasetIDList;
+			    return new List<int>();
 			}
 
 			if (int.TryParse(datasetIDList, out value))
@@ -349,12 +355,9 @@ namespace LLRC
 				lstDatasetIDs.Add(value);
 				return lstDatasetIDs;
 			}
-			else
-			{
-				errorMessage = "DatasetIDList must contain an integer, a list of integers, a range of integers, or a number of hours: " + datasetIDList;
-				return new List<int>();
-			}
-
+	        
+            errorMessage = "DatasetIDList must contain an integer, a list of integers, a range of integers, or a number of hours: " + datasetIDList;
+	        return new List<int>();
 		}
 
 		/// <summary>
@@ -369,11 +372,13 @@ namespace LLRC
 			{
 
 				// Validate that required files are present
-				List<string> lstRequiredFiles = new List<string>();
-				lstRequiredFiles.Add(RDATA_FILE_MODELS);
-				lstRequiredFiles.Add(RDATA_FILE_ALLDATA);
+				var lstRequiredFiles = new List<string>
+				{
+				    RDATA_FILE_MODELS,
+				    RDATA_FILE_ALLDATA
+				};
 
-				foreach (string filename in lstRequiredFiles)
+			    foreach (string filename in lstRequiredFiles)
 				{
 					if (!File.Exists(Path.Combine(mWorkingDirPath, filename)))
 					{
@@ -384,7 +389,7 @@ namespace LLRC
 
 				// Open the database
 				// Get the data from the database about the dataset Ids
-				DatabaseMang db = new DatabaseMang();
+				var db = new DatabaseMang();
 
 				List<List<string>> lstMetricsByDataset = db.GetData(lstDatasetIDs, mSkipAlreadyProcessedDatasets);
 
@@ -402,7 +407,7 @@ namespace LLRC
 				//Deletes Old files so they dont interfere with new ones
 				//Writes the data.csv file from the data gathered from database
 				//Writes the R file and the batch file to run it
-				WriteFiles wf = new WriteFiles();
+				var wf = new WriteFiles();
 				wf.DeleteFiles(mWorkingDirPath);
 				SortedSet<int> lstValidDatasetIDs = wf.WriteCsv(lstMetricsByDataset, mWorkingDirPath);
 
@@ -433,7 +438,7 @@ namespace LLRC
 				if (!mPostToDB)
 				{
 					// Display the results
-					Posting post = new Posting();
+					var post = new Posting();
 					Dictionary<int, string> dctResults = post.CacheQCDMResults(mWorkingDirPath);
 					int datasetCountDisplayed = 0;
 
@@ -446,7 +451,7 @@ namespace LLRC
 						datasetCountDisplayed += 1;
 						if (datasetCountDisplayed >= mMaxResultsToDisplay)
 						{
-							Console.WriteLine("Results for " + (dctResults.Count - datasetCountDisplayed).ToString() + " additional datasets not displayed");
+							Console.WriteLine("Results for " + (dctResults.Count - datasetCountDisplayed) + " additional datasets not displayed");
 							break;
 						}
 					}
@@ -464,7 +469,7 @@ namespace LLRC
 						System.Threading.Thread.Sleep(333);
 						PRISM.Processes.clsProgRunner.GarbageCollectNow();
 
-						Posting post = new Posting(mConnectionString);
+						var post = new Posting(mConnectionString);
 						success = post.PostToDatabase(lstMetricsByDataset, lstValidDatasetIDs, mWorkingDirPath);
 
 						if (success)
@@ -495,7 +500,7 @@ namespace LLRC
 
 						if (post.BadDatasetIDs.Count > 0)
 						{
-							StringBuilder sbBadDatasetIDs = new StringBuilder();
+							var sbBadDatasetIDs = new StringBuilder();
 							foreach (int datasetID in post.BadDatasetIDs)
 							{
 								if (sbBadDatasetIDs.Length > 0)
@@ -503,7 +508,7 @@ namespace LLRC
 								sbBadDatasetIDs.Append(datasetID);
 							}
 
-							Console.WriteLine("Dataset IDs for which LLRC could not compute a QCDM result: " + sbBadDatasetIDs.ToString());
+							Console.WriteLine("Dataset IDs for which LLRC could not compute a QCDM result: " + sbBadDatasetIDs);
 						}
 					}
 
@@ -524,25 +529,26 @@ namespace LLRC
 			return true;
 		}
 
-		/// <summary>
-		/// Starts R to perform the processing
-		/// </summary>
-		/// <param name="WorkingDirPath"></param>
-		/// <returns>True if success, false if an error</returns>
-		protected bool RunLLRC(string WorkingDirPath, int datasetCount)
+	    /// <summary>
+	    /// Starts R to perform the processing
+	    /// </summary>
+	    /// <param name="WorkingDirPath"></param>
+	    /// <param name="datasetCount"></param>
+	    /// <returns>True if success, false if an error</returns>
+	    protected bool RunLLRC(string WorkingDirPath, int datasetCount)
 		{
 
 			string appFolderPath = GetAppFolderPath();
 
 			//Runs the batch program
-			System.Diagnostics.Process p = new System.Diagnostics.Process();
+			var p = new System.Diagnostics.Process();
 			p.StartInfo.FileName = Path.Combine(WorkingDirPath, "RunR.bat");
 			p.Start();
 
 			string scriptOutFilePath = Path.Combine(appFolderPath, "QCDMscript.r.Rout");
 
 			// Note that this results file must be named TestingDataset.csv
-			FileInfo fiResultsFile = new FileInfo(Path.Combine(WorkingDirPath, "TestingDataset.csv"));
+			var fiResultsFile = new FileInfo(Path.Combine(WorkingDirPath, "TestingDataset.csv"));
 			bool bAbort = false;
 
 			Console.WriteLine();
@@ -583,12 +589,10 @@ namespace LLRC
 				mErrorMessage = "R exited without error, but the results file does not exist: " + fiResultsFile.Name + " at " + fiResultsFile.FullName;
 				return false;
 			}
-			else
-			{
-				Console.WriteLine("  LLRC computation complete");
-			}
+	        
+            Console.WriteLine("  LLRC computation complete");
 
-			return true;
+	        return true;
 		}
 
 	}
