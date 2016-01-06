@@ -1,18 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
-using System.Text.RegularExpressions;
 
 namespace LLRC
 {
     class DatabaseMang
     {
-		// Old: public const string DEFAULT_CONNECTION_STRING = "user id=dmsreader;password=dms4fun;server=gigasax;Trusted_Connection=yes;database=DMS5;connection timeout=30";
-		// Old: public const string DEFAULT_CONNECTION_STRING = "Persist Security Info=False;Integrated Security=true;Initial Catalog=Northwind;server=gigasax"
+public const string DEFAULT_CONNECTION_STRING = "Data Source=gigasax;Initial Catalog=DMS5;Integrated Security=SSPI;";
 
-		public const string DEFAULT_CONNECTION_STRING = "Data Source=gigasax;Initial Catalog=DMS5;Integrated Security=SSPI;";
-
-		private SqlConnection mConnection;
+		private readonly SqlConnection mConnection;
 
 		protected string mErrorMessage;
 
@@ -70,7 +66,7 @@ namespace LLRC
 		public DatabaseMang(string connectionString)
 		{
 			if (string.IsNullOrEmpty(connectionString))
-				connectionString = DatabaseMang.DEFAULT_CONNECTION_STRING;			
+				connectionString = DEFAULT_CONNECTION_STRING;			
 
 			mConnection = new SqlConnection(connectionString);
 			mErrorMessage = string.Empty;
@@ -128,25 +124,25 @@ namespace LLRC
         {
 			const int CHUNK_SIZE = 500;
 
-			SortedSet<int> datasetIDsWithMetrics = new SortedSet<int>();
-            List<List<string>> lstMetricsByDataset = new List<List<string>>();
-			System.Text.StringBuilder sbDatasets = new System.Text.StringBuilder();
+			var datasetIDsWithMetrics = new SortedSet<int>();
+            var lstMetricsByDataset = new List<List<string>>();
+			var sbDatasets = new System.Text.StringBuilder();
 
 			// Open the database connection
 			if (!Open())
 				return new List<List<string>>();
 
-			DateTime dtStartTime = DateTime.UtcNow;
-			DateTime dtLastProgress = DateTime.UtcNow;
-			bool showProgress = false;
+			var dtStartTime = DateTime.UtcNow;
+			var dtLastProgress = DateTime.UtcNow;
+			var showProgress = false;
 
 			// Process the datasets in chunks, 500 datasets at a time
-			for (int i = 0; i < datasetIDs.Count; i += CHUNK_SIZE)
+			for (var i = 0; i < datasetIDs.Count; i += CHUNK_SIZE)
 			{
 
 				// Construct a comma-separated list of dataset IDs
 				sbDatasets.Clear();
-				for (int j = i; j < i + CHUNK_SIZE && j < datasetIDs.Count; j += 1)
+				for (var j = i; j < i + CHUNK_SIZE && j < datasetIDs.Count; j += 1)
 				{
 					if (sbDatasets.Length > 0)
 						sbDatasets.Append(",");
@@ -158,7 +154,7 @@ namespace LLRC
 				{
 					// Uses are massive SQL command to get the data to come out in the order we want it too
 					// If you add/remove columns, you must update the iWriteFiles.WriteCsv
-					string sqlQuery = "SELECT M.[Instrument Group], M.[Dataset_ID], [Instrument], [Dataset], [XIC_WideFrac]" +
+					var sqlQuery = "SELECT M.[Instrument Group], M.[Dataset_ID], [Instrument], [Dataset], [XIC_WideFrac]" +
 					 ", [MS1_TIC_Change_Q2], [MS1_TIC_Q2], [MS1_Density_Q1], [MS1_Density_Q2], [MS2_Density_Q1], [DS_2A], [DS_2B], [MS1_2B]" +
 					 ", [P_2A], [P_2B], [P_2C], [SMAQC_Job], [Quameter_Job], [XIC_FWHM_Q1], [XIC_FWHM_Q2], [XIC_FWHM_Q3], [XIC_Height_Q2], [XIC_Height_Q3]" +
 					 ", [XIC_Height_Q4], [RT_Duration], [RT_TIC_Q1], [RT_TIC_Q2], [RT_TIC_Q3], [RT_TIC_Q4], [RT_MS_Q1], [RT_MS_Q2], [RT_MS_Q3], [RT_MS_Q4]" +
@@ -170,14 +166,14 @@ namespace LLRC
 					 ", [MS2_4B], [MS2_4C], [MS2_4D], [P_1A], [P_1B], [P_3], [Smaqc_Last_Affected], [PSM_Source_Job]" +
 					 " FROM [V_Dataset_QC_Metrics] M INNER JOIN [T_Dataset] ON M.[Dataset_ID] = [T_Dataset].[Dataset_ID]" +
 					 " WHERE [T_Dataset].[DS_sec_sep] NOT LIKE 'LC-Agilent-2D-Formic%'" +
-					 " AND M.[Dataset_ID] IN (" + sbDatasets.ToString() + ")";
+					 " AND M.[Dataset_ID] IN (" + sbDatasets + ")";
 
 					if (skipAlreadyProcessedDatasets)
 						sqlQuery += " AND M.QCDM Is Null";
 
-					SqlCommand command = new SqlCommand(sqlQuery, mConnection);
+					var command = new SqlCommand(sqlQuery, mConnection);
 
-					SqlDataReader drReader = command.ExecuteReader();
+					var drReader = command.ExecuteReader();
 
 					if (drReader.HasRows)
 					{
@@ -194,8 +190,8 @@ namespace LLRC
 							{
 								datasetIDsWithMetrics.Add(datasetID);
 
-								List<string> lstMetrics = new List<string>();
-								for (int j = 0; j < drReader.FieldCount; j++)
+								var lstMetrics = new List<string>();
+								for (var j = 0; j < drReader.FieldCount; j++)
 								{
 									lstMetrics.Add(string.IsNullOrWhiteSpace(GetColumnString(drReader, j)) ? "NA" : drReader[j].ToString());
 								}
@@ -228,15 +224,15 @@ namespace LLRC
 
 				if (showProgress && DateTime.UtcNow.Subtract(dtLastProgress).TotalMilliseconds >= 333)
 				{
-					double percentComplete = (i + CHUNK_SIZE) / (double)datasetIDs.Count * 100;
+					var percentComplete = (i + CHUNK_SIZE) / (double)datasetIDs.Count * 100;
 					Console.WriteLine("Retrieving metrics from the database: " + percentComplete.ToString("0.0") + "% complete");
 					dtLastProgress = DateTime.UtcNow;
 				}
 			}
 
 			// Look for datasets for which metrics were not available
-			int warnCount = 0;
-			foreach (int datasetID in datasetIDs)
+			var warnCount = 0;
+			foreach (var datasetID in datasetIDs)
             {
 				if (!datasetIDsWithMetrics.Contains(datasetID))
 				{
@@ -248,7 +244,7 @@ namespace LLRC
             }
 
 			if (warnCount > 10)
-				Console.WriteLine(" ... " + (warnCount - 10).ToString() + " additional warnings not shown");
+				Console.WriteLine(" ... " + (warnCount - 10) + " additional warnings not shown");
 
 			if (datasetIDs.Count > 1)
 				Console.WriteLine("\nRetrieved dataset metrics for " + lstMetricsByDataset.Count + " / " + datasetIDs.Count + " datasets");

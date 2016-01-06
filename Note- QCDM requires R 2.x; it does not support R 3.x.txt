@@ -1,0 +1,6 @@
+QCDM was compiled with R 2.x and it thus will not work with R 3.x
+
+Prior to November 2015 the Analysis Manager ran QCDM as part of the SMAQC step tool.
+After installing R 3.x that processing no longer works and QCDM is thus skipped.
+
+QCDM is, however, run by Gigasax, starting it using Sql Server Agent job "Compute LLRC"

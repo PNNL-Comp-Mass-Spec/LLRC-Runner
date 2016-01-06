@@ -1,9 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace LLRC
 {
@@ -74,7 +71,7 @@ namespace LLRC
 			try
 			{
 				// Cache the QCDMResults
-				Dictionary<int, string> dctResults = CacheQCDMResults(workingDirPath);
+				var dctResults = CacheQCDMResults(workingDirPath);
 
 				try
 				{
@@ -84,19 +81,19 @@ namespace LLRC
 					mBadDatasetIDs.Clear();
 					mErrors.Clear();
 
-					foreach (List<string> metricsOneDataset in lstMetricsByDataset)
+					foreach (var metricsOneDataset in lstMetricsByDataset)
 					{
 
-						int datasetID = LLRCWrapper.GetDatasetIdForMetricRow(metricsOneDataset);
+						var datasetID = LLRCWrapper.GetDatasetIdForMetricRow(metricsOneDataset);
 
 						if (!lstValidDatasetIDs.Contains(datasetID))
 						{
 							continue;
 						}
 
-						string smaqcJob = metricsOneDataset[(int)DatabaseMang.MetricColumnIndex.SMAQC_Job];
-						string quameterJob = metricsOneDataset[(int)DatabaseMang.MetricColumnIndex.Quameter_Job];
-						string datasetName = metricsOneDataset[(int)DatabaseMang.MetricColumnIndex.DatasetName];
+						var smaqcJob = metricsOneDataset[(int)DatabaseMang.MetricColumnIndex.SMAQC_Job];
+						var quameterJob = metricsOneDataset[(int)DatabaseMang.MetricColumnIndex.Quameter_Job];
+						var datasetName = metricsOneDataset[(int)DatabaseMang.MetricColumnIndex.DatasetName];
 						string LLRCPrediction;
 
 						if (!dctResults.TryGetValue(datasetID, out LLRCPrediction))
@@ -109,7 +106,7 @@ namespace LLRC
 						var xml = ConvertQcdmtoXml(LLRCPrediction, smaqcJob, quameterJob, datasetName);
 
 						//attempts to post to database and returns true or false
-						bool success = PostQcdmResultsToDb(datasetID, xml, mConnectionString, STORED_PROCEDURE);
+						var success = PostQcdmResultsToDb(datasetID, xml, mConnectionString, STORED_PROCEDURE);
 						if (!success)
 						{
 							mBadDatasetIDs.Add(datasetID);
@@ -150,8 +147,8 @@ namespace LLRC
 		//gets the QCDM value from the .csv file that is created from the R program
 		public Dictionary<int, string> CacheQCDMResults(string workingDirPath)
 		{
-			string resultsFilePath = Path.Combine(workingDirPath, "TestingDataset.csv");
-			Dictionary<int, string> results = new Dictionary<int, string>();
+			var resultsFilePath = Path.Combine(workingDirPath, "TestingDataset.csv");
+			var results = new Dictionary<int, string>();
 
 			if (!File.Exists(resultsFilePath))
 			{
@@ -159,15 +156,15 @@ namespace LLRC
 				return results;
 			}
 
-			using (StreamReader srResults = new StreamReader(new FileStream(resultsFilePath, FileMode.Open, FileAccess.Read, FileShare.Read)))
+			using (var srResults = new StreamReader(new FileStream(resultsFilePath, FileMode.Open, FileAccess.Read, FileShare.Read)))
 			{
-				bool headersParsed = false;
-				int colIndexLLRC = -1;
+				var headersParsed = false;
+				var colIndexLLRC = -1;
 
 				while (srResults.Peek() > -1)
 				{
-					string resultLine = srResults.ReadLine();
-					string[] resultValues = resultLine.Split(',');
+					var resultLine = srResults.ReadLine();
+					var resultValues = resultLine.Split(',');
 
 					if (resultValues.Length < 1)
 						continue;
@@ -268,14 +265,14 @@ namespace LLRC
 			const int maxRetryCount = 3;
 			const int secBetweenRetries = 20;
 
-			int intStartIndex = 0;
-			int intResult = 0;
+			var intStartIndex = 0;
+			var intResult = 0;
 
 			string sXMLResultsClean = null;
 
 			System.Data.SqlClient.SqlCommand objCommand;
 
-			bool blnSuccess = false;
+			var blnSuccess = false;
 			mErrorMessage = string.Empty;
 			mStoredProcedureError = string.Empty;
 
@@ -329,7 +326,7 @@ namespace LLRC
 				}
 				else
 				{
-					mErrorMessage = "Error storing QCDM Results in database for DatasetID " + intDatasetId + ": " + sStoredProcedure + " returned " + intResult.ToString();
+					mErrorMessage = "Error storing QCDM Results in database for DatasetID " + intDatasetId + ": " + sStoredProcedure + " returned " + intResult;
 					blnSuccess = false;
 				}
 

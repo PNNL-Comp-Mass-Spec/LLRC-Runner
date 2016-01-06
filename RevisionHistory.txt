@@ -1,5 +1,9 @@
 LLRC Runner Change Log
 
+Version 1.0.5849; January 1, 2016
+	- Now reports an error if the system has R 3.x instead of R 2.x
+	- Fixed bug finding recent datasets within x hours
+
 Version 1.0.5546; March 9, 2015
 	- No longer exiting the program with an error code if processing a time range and no new QC datasets are found
 

@@ -17,7 +17,7 @@ namespace LLRCRunner
     internal class Program
     {
 
-        public const string PROGRAM_DATE = "March 9, 2015";
+        public const string PROGRAM_DATE = "January 6, 2016";
 
         protected const string CONNECTION_STRING = "Data Source=gigasax;Initial Catalog=DMS5;Integrated Security=SSPI;";
 
@@ -41,7 +41,7 @@ namespace LLRCRunner
 
             try
             {
-                bool success = false;
+                var success = false;
 
                 if (objParseCommandLine.ParseCommandLine())
                 {
@@ -63,7 +63,7 @@ namespace LLRCRunner
                 bool processingTimespan;
 
                 // Parse the dataset ID list
-                List<int> lstDatasetIDs = LLRCWrapper.ParseDatasetIDList(mDatasetIDList, CONNECTION_STRING, out errorMessage, out processingTimespan);
+                var lstDatasetIDs = LLRCWrapper.ParseDatasetIDList(mDatasetIDList, CONNECTION_STRING, out errorMessage, out processingTimespan);
 
                 if (lstDatasetIDs.Count == 0)
                 {
@@ -96,7 +96,11 @@ namespace LLRCRunner
 
                 if (!success)
                 {
-                    ShowErrorMessage("Error processing the datasets: " + oProcessingClass.ErrorMessage);
+                    if (oProcessingClass.ErrorMessage.StartsWith("Error processing the datasets"))
+                        ShowErrorMessage(oProcessingClass.ErrorMessage);
+                    else
+                        ShowErrorMessage("Error processing the datasets: " + oProcessingClass.ErrorMessage);
+
                     return -3;
                 }
             }
@@ -126,7 +130,7 @@ namespace LLRCRunner
                 if (objParseCommandLine.InvalidParametersPresent(lstValidParameters))
                 {
                     var badArguments = new List<string>();
-                    foreach (string item in objParseCommandLine.InvalidParameters(lstValidParameters))
+                    foreach (var item in objParseCommandLine.InvalidParameters(lstValidParameters))
                     {
                         badArguments.Add("/" + item);
                     }
@@ -196,9 +200,9 @@ namespace LLRCRunner
             Console.WriteLine();
             Console.WriteLine(strSeparator);
             Console.WriteLine(strTitle);
-            string strMessage = strTitle + ":";
+            var strMessage = strTitle + ":";
 
-            foreach (string item in items)
+            foreach (var item in items)
             {
                 Console.WriteLine("   " + item);
                 strMessage += " " + item;
@@ -222,7 +226,7 @@ namespace LLRCRunner
 
         private static void ShowProgramHelp()
         {
-            string exeName = System.IO.Path.GetFileName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+            var exeName = System.IO.Path.GetFileName(System.Reflection.Assembly.GetExecutingAssembly().Location);
 
             try
             {
@@ -231,7 +235,7 @@ namespace LLRCRunner
                 Console.WriteLine();
                 Console.WriteLine("Program syntax:" + Environment.NewLine + exeName);
 
-                Console.WriteLine(" DatasetIDList [/W:WorkingDirectory] [/DB]");
+                Console.WriteLine(" DatasetIDList [/W:WorkingDirectory] [/DB] [/Skip]");
 
                 Console.WriteLine();
                 Console.WriteLine("DatasetIDList can be a single DatasetID, a list of DatasetIDs separated by commas, a range of DatasetIDs separated with a dash, or a timespan in hours.  Examples:");
@@ -240,12 +244,14 @@ namespace LLRCRunner
                 Console.WriteLine(" " + exeName + " 325145-325150          (will process 6 dataset)");
                 Console.WriteLine(" " + exeName + " 24h                    (will process all new datasets created in the last 24 hours)");
                 Console.WriteLine();
-                Console.WriteLine("\"New\" datasets are those with null QCDM values in the T_Dataset_QC table");
-                Console.WriteLine();
                 Console.WriteLine("Use /W to specify the working directory path; default is the folder with the .exe");
                 Console.WriteLine("The working directory must have files " + LLRCWrapper.RDATA_FILE_MODELS + " and " + LLRCWrapper.RDATA_FILE_ALLDATA);
                 Console.WriteLine();
                 Console.WriteLine("Use /DB to post the LLRC results to the database");
+                Console.WriteLine();
+                Console.WriteLine("Use /Skip to skip datasets that already have a QCDM value defined");
+                Console.WriteLine();
+                Console.WriteLine("\"New\" datasets are those with null QCDM values in the T_Dataset_QC table");
 
                 Console.WriteLine();
                 Console.WriteLine("Program written by Joshua Davis and Matthew Monroe for the Department of Energy (PNNL, Richland, WA) in 2013");

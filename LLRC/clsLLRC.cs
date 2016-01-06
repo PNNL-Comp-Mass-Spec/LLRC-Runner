@@ -9,7 +9,7 @@ namespace LLRC
 {
 	public class LLRCWrapper
 	{
-		public const string PROGRAM_DATE = "July 30, 2013";
+		public const string PROGRAM_DATE = "January 6, 2016";
 
 	    public const string NO_NEW_RECENT_DATASETS = "No new datasets found with new QC values from the last";
 
@@ -141,16 +141,16 @@ namespace LLRC
 					var command = new SqlCommand(
 						 " SELECT Dataset_ID" +
 						 " FROM T_Dataset_QC" +
-						 " WHERE (QCDM IS NULL) AND (DATEDIFF(hour, Quameter_Last_Affected, GETDATE()) < 24 OR" +
-												   " DATEDIFF(hour, Last_Affected, GETDATE()) < 24)", connection);
+						 " WHERE (QCDM IS NULL) AND (DATEDIFF(hour, Quameter_Last_Affected, GETDATE()) < " + hours + " OR" +
+												   " DATEDIFF(hour, Last_Affected, GETDATE()) < " + hours + ")", connection);
 
-					using (SqlDataReader drReader = command.ExecuteReader())
+					using (var drReader = command.ExecuteReader())
 					{
 						if (drReader.HasRows)
 						{
 							while (drReader.Read())
 							{
-								int datasetID = drReader.GetInt32(0);
+								var datasetID = drReader.GetInt32(0);
 								datasetIDs.Add(datasetID);
 							}
 						}
@@ -225,7 +225,7 @@ namespace LLRC
 				{
 					while (srOutFile.Peek() > -1)
 					{
-						string logText = srOutFile.ReadLine();
+						var logText = srOutFile.ReadLine();
                         if (string.IsNullOrEmpty(logText))
                             continue;
 
@@ -276,7 +276,7 @@ namespace LLRC
 			if (datasetIDList.IndexOf(',') > 0)
 			{
 				// Split datasetIDList on commas
-				foreach (string datasetID in datasetIDList.Split(','))
+				foreach (var datasetID in datasetIDList.Split(','))
 				{
 					if (int.TryParse(datasetID, out value))
 					{
@@ -289,7 +289,7 @@ namespace LLRC
 			if (datasetIDList.IndexOf('-') > 0)
 			{
 				// Split datasetIDList on the dash
-				List<string> lstDatasetIDText = datasetIDList.Split('-').ToList();
+				var lstDatasetIDText = datasetIDList.Split('-').ToList();
 
 				if (lstDatasetIDText.Count != 2)
 				{
@@ -378,7 +378,7 @@ namespace LLRC
 				    RDATA_FILE_ALLDATA
 				};
 
-			    foreach (string filename in lstRequiredFiles)
+			    foreach (var filename in lstRequiredFiles)
 				{
 					if (!File.Exists(Path.Combine(mWorkingDirPath, filename)))
 					{
@@ -391,9 +391,9 @@ namespace LLRC
 				// Get the data from the database about the dataset Ids
 				var db = new DatabaseMang();
 
-				List<List<string>> lstMetricsByDataset = db.GetData(lstDatasetIDs, mSkipAlreadyProcessedDatasets);
+				var lstMetricsByDataset = db.GetData(lstDatasetIDs, mSkipAlreadyProcessedDatasets);
 
-				//Checks to see if we have any datasets
+				// Checks to see if we have any datasets
 				if (lstMetricsByDataset.Count == 0)
 				{
 					mErrorMessage = "No Metrics were found for the given Datasets IDs";
@@ -404,12 +404,12 @@ namespace LLRC
 						return false;
 				}
 
-				//Deletes Old files so they dont interfere with new ones
-				//Writes the data.csv file from the data gathered from database
-				//Writes the R file and the batch file to run it
+				// Deletes Old files so they don't interfere with new ones
+				// Writes the data.csv file from the data gathered from database
+				// Writes the R file and the batch file to run it
 				var wf = new WriteFiles();
 				wf.DeleteFiles(mWorkingDirPath);
-				SortedSet<int> lstValidDatasetIDs = wf.WriteCsv(lstMetricsByDataset, mWorkingDirPath);
+				var lstValidDatasetIDs = wf.WriteCsv(lstMetricsByDataset, mWorkingDirPath);
 
 				wf.WriteRFile(mWorkingDirPath);
 				wf.WriteBatch(mWorkingDirPath);
@@ -427,7 +427,7 @@ namespace LLRC
 						return false;
 				}
 
-				bool success = RunLLRC(mWorkingDirPath, lstValidDatasetIDs.Count);
+				var success = RunLLRC(mWorkingDirPath, lstValidDatasetIDs.Count);
 
 				if (!success)
 				{
@@ -439,8 +439,8 @@ namespace LLRC
 				{
 					// Display the results
 					var post = new Posting();
-					Dictionary<int, string> dctResults = post.CacheQCDMResults(mWorkingDirPath);
-					int datasetCountDisplayed = 0;
+					var dctResults = post.CacheQCDMResults(mWorkingDirPath);
+					var datasetCountDisplayed = 0;
 
 					// Display results for the first 10 datasets
 					Console.WriteLine();
@@ -461,7 +461,7 @@ namespace LLRC
 					// Post to the database
 					// Allow for up to 2 retries
 
-					int retry = 3;
+					var retry = 3;
 
 					while (retry > 0)
 					{
@@ -485,7 +485,7 @@ namespace LLRC
 							}
 							else
 							{
-								foreach (string error in post.Errors)
+								foreach (var error in post.Errors)
 								{
 									if (string.IsNullOrEmpty(mErrorMessage))
 										mErrorMessage = string.Copy(error);
@@ -501,7 +501,7 @@ namespace LLRC
 						if (post.BadDatasetIDs.Count > 0)
 						{
 							var sbBadDatasetIDs = new StringBuilder();
-							foreach (int datasetID in post.BadDatasetIDs)
+							foreach (var datasetID in post.BadDatasetIDs)
 							{
 								if (sbBadDatasetIDs.Length > 0)
 									sbBadDatasetIDs.Append(", ");
@@ -519,7 +519,7 @@ namespace LLRC
 
 			}
 
-			//Displays errors if any occur
+			// Displays errors if any occur
 			catch (Exception e)
 			{
 				mErrorMessage = "Error processing the datasets: " + e.Message;
@@ -538,23 +538,23 @@ namespace LLRC
 	    protected bool RunLLRC(string WorkingDirPath, int datasetCount)
 		{
 
-			string appFolderPath = GetAppFolderPath();
+			var appFolderPath = GetAppFolderPath();
 
-			//Runs the batch program
+			// Runs the batch program
 			var p = new System.Diagnostics.Process();
 			p.StartInfo.FileName = Path.Combine(WorkingDirPath, "RunR.bat");
 			p.Start();
 
-			string scriptOutFilePath = Path.Combine(appFolderPath, "QCDMscript.r.Rout");
+			var scriptOutFilePath = Path.Combine(appFolderPath, "QCDMscript.r.Rout");
 
 			// Note that this results file must be named TestingDataset.csv
 			var fiResultsFile = new FileInfo(Path.Combine(WorkingDirPath, "TestingDataset.csv"));
-			bool bAbort = false;
+			var bAbort = false;
 
 			Console.WriteLine();
 			Console.WriteLine("Starting R to compute LLRC for " + datasetCount + " dataset" + (datasetCount > 1 ? "s" : ""));
 
-			int sleepTimeMsec = 500;
+			var sleepTimeMsec = 500;
 
 			// Checks to see if the files have been made
 			while (!p.HasExited && !fiResultsFile.Exists)

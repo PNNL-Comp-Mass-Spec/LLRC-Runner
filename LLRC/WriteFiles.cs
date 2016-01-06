@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Net;
 using System.Text;
 using Microsoft.Win32;
 
@@ -27,31 +28,30 @@ namespace LLRC
 		/// <param name="instrumentGroup"></param>
 		/// <param name="metricsOneDataset"></param>
 		/// <param name="dctRequiredValues"></param>
+        /// <param name="showWarning"></param>
 		/// <param name="sb"></param>
 		/// <returns>True if hte metrics are valid, otherwise false</returns>
 		protected bool AppendToCsv(string instrumentGroup, List<string> metricsOneDataset, Dictionary<int, string> dctRequiredValues, bool showWarning, ref StringBuilder sb)
 		{
-			int datasetID = LLRCWrapper.GetDatasetIdForMetricRow(metricsOneDataset);
+			var datasetID = LLRCWrapper.GetDatasetIdForMetricRow(metricsOneDataset);
 
 			if (RowIsMissingValues(datasetID, metricsOneDataset, dctRequiredValues, showWarning))
 			{
 				return false;
 			}
-			else
-			{
-				sb.Append(instrumentGroup + ",");
+		    
+            sb.Append(instrumentGroup + ",");
 
-				// Append the remaining values
-				for (int j = 1; j < metricsOneDataset.Count; j++)
-				{
-					sb.Append(metricsOneDataset[j] + ",");
-				}
+		    // Append the remaining values
+		    for (var j = 1; j < metricsOneDataset.Count; j++)
+		    {
+		        sb.Append(metricsOneDataset[j] + ",");
+		    }
 
-				// Append the current year
-				sb.AppendLine(DateTime.Now.Year.ToString());
+		    // Append the current year
+		    sb.AppendLine(DateTime.Now.Year.ToString());
 
-				return true;
-			}
+		    return true;
 		}
 
 				
@@ -69,14 +69,14 @@ namespace LLRC
         /// <summary>
 		/// Deletes old files so they dont interfere with new ones
         /// </summary>
-        /// <param name="fileloc"></param>
+        /// <param name="workingDirPath"></param>
 		public void DeleteFiles(string workingDirPath)
         {
-			List<string> lstFilesToDelete = CreateList("TestingDataset.csv", "data.csv");
+			var lstFilesToDelete = CreateList("TestingDataset.csv", "data.csv");
 			
-			foreach (string fileName in lstFilesToDelete)
+			foreach (var fileName in lstFilesToDelete)
 			{
-				FileInfo fiFile = new FileInfo(Path.Combine(workingDirPath, fileName));
+				var fiFile = new FileInfo(Path.Combine(workingDirPath, fileName));
 				if (fiFile.Exists)
 					fiFile.Delete();
             }
@@ -86,9 +86,10 @@ namespace LLRC
 		/// <summary>
 		/// Examines the data in row to determine if any of the columns in dctRequiredValues is not numeric
 		/// </summary>
-		/// <param name="datasetName"></param>
+		/// <param name="datasetID"></param>
 		/// <param name="row"></param>
 		/// <param name="dctRequiredValues"></param>
+        /// <param name="showWarning"></param>
 		/// <returns>True if one or more columns is missing a value, false if no problems</returns>
 		protected bool RowIsMissingValues(int datasetID, List<string> row, Dictionary<int, string> dctRequiredValues, bool showWarning)
 		{
@@ -109,14 +110,14 @@ namespace LLRC
         /// <summary>
 		/// Writes the .R file to run the formula
         /// </summary>
-        /// <param name="fileloc"></param>
+        /// <param name="workingDirPath"></param>
 		public void WriteRFile(string workingDirPath)
         {
-			string folderPathUnix = workingDirPath.Replace(@"\", "/");
+			var folderPathUnix = workingDirPath.Replace(@"\", "/");
 			if (!folderPathUnix.EndsWith("/"))
 				folderPathUnix += '/';
 
-			string contents = "require(QCDM)" + "\n" +
+			var contents = "require(QCDM)" + "\n" +
 			"outDataName <- " + '"' + folderPathUnix + LLRCWrapper.RDATA_FILE_ALLDATA + '"' + "\n" +
             "outputFolder <- " + '"' + folderPathUnix + '"' + "\n" +
 			"ncdataFilename <- " + '"' + folderPathUnix + "data.csv" + '"' + "\n" +
@@ -131,7 +132,7 @@ namespace LLRC
         /// <param name="fileloc"></param>
         public void WriteBatch(string fileloc)
         {
-			string contents = '"' + mRProgramPath + '"' + " CMD BATCH --vanilla --slave " + '"' + Path.Combine(fileloc, LLR_SCRIPT_NAME) + '"';
+			var contents = '"' + mRProgramPath + '"' + " CMD BATCH --vanilla --slave " + '"' + Path.Combine(fileloc, LLR_SCRIPT_NAME) + '"';
             File.WriteAllText(Path.Combine(fileloc, "RunR.bat"), contents);
         }
 
@@ -139,36 +140,37 @@ namespace LLRC
 		/// Writes the data from the database into a .csv file to be used in the R program
         /// </summary>
         /// <param name="lstMetricsByDataset"></param>
-        /// <param name="size"></param>
-        /// <param name="fileloc"></param>
+        /// <param name="workingDirPath"></param>
 		/// <returns>The list of valid dataset IDs</returns>
 		public SortedSet<int> WriteCsv(List<List<string>> lstMetricsByDataset, string workingDirPath)
         {
 
-			StringBuilder sb = new StringBuilder();
+			var sb = new StringBuilder();
 			sb.AppendLine(HEADER_LINE);
 
-			SortedSet<int> lstValidDatasetIDs = new SortedSet<int>();
-			bool showWarning = true;
-			int warnCount = 0;
+			var lstValidDatasetIDs = new SortedSet<int>();
+			var showWarning = true;
+			var warnCount = 0;
+            var instrumentWarnCount = 0;
 
-			foreach (List<string> metricsOneDataset in lstMetricsByDataset)
+			foreach (var metricsOneDataset in lstMetricsByDataset)
 			{
 		
-                //Checks the instrument Catagory and checks to make sure the appropriate columns are present to calculate the results
-                //If a column is missing will return has misssing value else will add the values to the string builder
-				string instrumentGroup = metricsOneDataset[DatabaseMang.MetricColumnIndex.InstrumentGroup];
-				int datasetID = LLRCWrapper.GetDatasetIdForMetricRow(metricsOneDataset);
-				bool validInstrumentGroup = false;
+                // Checks the instrument Catagory and checks to make sure the appropriate columns are present to calculate the results
+                // If a column is missing the dataset will be skipped
+
+				var instrumentGroup = metricsOneDataset[DatabaseMang.MetricColumnIndex.InstrumentGroup];
+				var datasetID = LLRCWrapper.GetDatasetIdForMetricRow(metricsOneDataset);
+				var validInstrumentGroup = false;
 
 				if (datasetID <= 0)
 				{
 					continue;
 				}
 
-				Dictionary<int, string> dctRequiredValues = new Dictionary<int, string>();
+				var dctRequiredValues = new Dictionary<int, string>();
 
-				bool validMetrics = false;
+				var validMetrics = false;
 
                 if (instrumentGroup.Equals("LTQ") || instrumentGroup.Equals("LTQ-ETD") || instrumentGroup.Equals("LTQ-Prep") || instrumentGroup.Equals("VelosPro"))
                 {
@@ -225,14 +227,18 @@ namespace LLRC
 				}
 				else
 				{
-					if (!validInstrumentGroup)
-						Console.WriteLine("Unsupported instrument group \"" + instrumentGroup + "\" for DatasetID " + datasetID);
-					else
-					{
-						warnCount += 1;
-						if (warnCount == 10)
-							showWarning = false;
-					}
+				    if (!validInstrumentGroup)
+				    {
+				        instrumentWarnCount += 1;
+                        if (instrumentWarnCount <= 10)
+				            Console.WriteLine("Unsupported instrument group \"" + instrumentGroup + "\" for DatasetID " + datasetID);
+				    }
+				    else
+				    {
+				        warnCount += 1;
+				        if (warnCount == 10)
+				            showWarning = false;
+				    }
 				}
             }
 
@@ -240,10 +246,15 @@ namespace LLRC
 
 			if (warnCount > 10)
 			{
-				Console.WriteLine(" ... " + (warnCount - 10).ToString() + " additional warnings not shown");
+				Console.WriteLine(" ... " + (warnCount - 10) + " additional missing value warnings not shown");
 			}
 
-			return lstValidDatasetIDs;
+            if (instrumentWarnCount > 10)
+            {
+                Console.WriteLine(" ... " + (instrumentWarnCount - 10) + " additional instrument warnings not shown");
+            }
+
+            return lstValidDatasetIDs;
         }
 
         /// <summary>
@@ -254,21 +265,37 @@ namespace LLRC
         {
             const string RCORE_SUBKEY = @"SOFTWARE\R-core";
 
-            Microsoft.Win32.RegistryKey regRCore = Registry.LocalMachine.OpenSubKey(RCORE_SUBKEY);
+            var regRCore = Registry.LocalMachine.OpenSubKey(RCORE_SUBKEY);
             if (regRCore == null)
             {
-                throw new System.ApplicationException("Registry key is not found: " + RCORE_SUBKEY);
+                throw new ApplicationException("Registry key is not found: " + RCORE_SUBKEY);
             }
-            bool is64Bit = Environment.Is64BitProcess;
-            string sRSubKey = is64Bit ? "R64" : "R";
-            Microsoft.Win32.RegistryKey regR = regRCore.OpenSubKey(sRSubKey);
+            var is64Bit = Environment.Is64BitProcess;
+            var sRSubKey = is64Bit ? "R64" : "R";
+            var regR = regRCore.OpenSubKey(sRSubKey);
             if (regR == null)
             {
-                throw new System.ApplicationException("Registry key is not found: " + RCORE_SUBKEY + @"\" + sRSubKey);
+                throw new ApplicationException("Registry key is not found: " + RCORE_SUBKEY + @"\" + sRSubKey);
             }
-            System.Version currentVersion = new System.Version((string)regR.GetValue("Current Version"));
-            string installPath = (string)regR.GetValue("InstallPath");
-            string bin = Path.Combine(installPath, "bin");
+
+            var currentVersion = new Version((string)regR.GetValue("Current Version"));
+
+            if (currentVersion.Major != 2)
+            {
+                var msg = "QCDM is only compatible with R 2.x, not version " + currentVersion.Major + ".x";
+                if (Dns.GetHostName().IndexOf("monroe3", StringComparison.InvariantCultureIgnoreCase) >= 0)
+                {
+                    Console.WriteLine(new string('-',70));
+                    Console.WriteLine("Warning: " + msg);
+                    Console.WriteLine(new string('-', 70));
+                    Console.WriteLine();
+                }
+                else
+                    throw new Exception(msg);
+            }            
+
+            var installPath = (string)regR.GetValue("InstallPath");
+            var bin = Path.Combine(installPath, "bin");
             bin = Path.Combine(bin, "R.exe");
 
             return bin;
