@@ -8,9 +8,10 @@ You must install the LLRC library into R prior to running LLRC.  Steps:
 	Option 1
 		a. Start the 64-bit R Gui
 		b. Choose Packages, then "Install packages from local zip file"
-		c. Choose file QCDM_2013.07.18.zip
+		c. Choose file QCDM_2013.09.27.zip
 		d. If prompted "Would you like to use a personal library instead?", choose "No"
 			i. Next, update "C:\Program Files\R\R-2.15.3\library" to grant "Write" access (you only need "Write", not "Modify")
+			ii. Now try again with menu item "Install packages from local zip file"
 
 	Option 2:
 		a. Run this at the command prompt:

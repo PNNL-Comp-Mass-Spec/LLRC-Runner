@@ -1,0 +1,1 @@
+"C:\Program Files\R\R-2.15.3\bin\R.exe" CMD BATCH --vanilla --slave "C:\DMS_Programs\LLRCRunner\QCDMscript.r"
