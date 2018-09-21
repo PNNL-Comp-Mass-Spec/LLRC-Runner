@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using LLRC;
+using PRISM;
 
 namespace LLRCRunner
 {
@@ -24,14 +25,14 @@ namespace LLRCRunner
         protected static string mDatasetIDList;
         protected static string mWorkingDirectory;
 
-        protected static int mMaxResultsToDisplay;		// Only used if mPostToDB is false
+        protected static int mMaxResultsToDisplay;      // Only used if mPostToDB is false
         protected static bool mPostToDB;
 
         protected static bool mSkipAlreadyProcessedDatasets;
 
         public static int Main(string[] args)
         {
-            var objParseCommandLine = new FileProcessor.clsParseCommandLine();
+            var objParseCommandLine = new clsParseCommandLine();
 
             mDatasetIDList = string.Empty;
             mWorkingDirectory = string.Empty;
@@ -59,11 +60,8 @@ namespace LLRCRunner
 
                 }
 
-                string errorMessage;
-                bool processingTimespan;
-
                 // Parse the dataset ID list
-                var lstDatasetIDs = LLRCWrapper.ParseDatasetIDList(mDatasetIDList, CONNECTION_STRING, out errorMessage, out processingTimespan);
+                var lstDatasetIDs = LLRCWrapper.ParseDatasetIDList(mDatasetIDList, CONNECTION_STRING, out var errorMessage, out var processingTimespan);
 
                 if (lstDatasetIDs.Count == 0)
                 {
@@ -71,7 +69,7 @@ namespace LLRCRunner
                     {
                         // No new, recent datasets
                         // This is not a critical error
-                        ShowMessage(errorMessage);
+                        Console.WriteLine(errorMessage);
                         return 0;
                     }
 
@@ -106,7 +104,7 @@ namespace LLRCRunner
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error occurred in Program->Main: " + Environment.NewLine + ex.Message);
+                ShowErrorMessage("Error occurred in Program->Main: " + ex.Message, ex);
                 return -1;
             }
 
@@ -118,7 +116,7 @@ namespace LLRCRunner
             return System.Reflection.Assembly.GetExecutingAssembly().GetName().Version + " (" + PROGRAM_DATE + ")";
         }
 
-        private static bool SetOptionsUsingCommandLineParameters(FileProcessor.clsParseCommandLine objParseCommandLine)
+        private static bool SetOptionsUsingCommandLineParameters(clsParseCommandLine objParseCommandLine)
         {
             // Returns True if no problems; otherwise, returns false
 
@@ -135,14 +133,13 @@ namespace LLRCRunner
                         badArguments.Add("/" + item);
                     }
 
-                    ShowErrorMessage("Invalid commmand line parameters", badArguments);
+                    ShowErrorMessage("Invalid command line parameters", badArguments);
 
                     return false;
                 }
 
-                // Query objParseCommandLine to see if various parameters are present						
-                string strValue;
-                if (objParseCommandLine.RetrieveValueForParameter("I", out strValue))
+                // Query objParseCommandLine to see if various parameters are present
+                if (objParseCommandLine.RetrieveValueForParameter("I", out var strValue))
                 {
                     mDatasetIDList = string.Copy(strValue);
                 }
@@ -168,8 +165,7 @@ namespace LLRCRunner
 
                 if (objParseCommandLine.RetrieveValueForParameter("Display", out strValue))
                 {
-                    int intValue;
-                    if (int.TryParse(strValue, out intValue))
+                    if (int.TryParse(strValue, out var intValue))
                         mMaxResultsToDisplay = intValue;
                 }
 
@@ -179,49 +175,20 @@ namespace LLRCRunner
             }
             catch (Exception ex)
             {
-                ShowErrorMessage("Error parsing the command line parameters: " + Environment.NewLine + ex.Message);
+                ShowErrorMessage("Error parsing the command line parameters: " + ex.Message, ex);
             }
 
             return false;
         }
 
-
-        private static void ShowErrorMessage(string strMessage)
+        private static void ShowErrorMessage(string message, Exception ex = null)
         {
-            ShowMessage(strMessage);
-
-			WriteToErrorStream(strMessage);
-		}
-
-        private static void ShowErrorMessage(string strTitle, IEnumerable<string> items)
-        {
-            const string strSeparator = "------------------------------------------------------------------------------";
-
-            Console.WriteLine();
-            Console.WriteLine(strSeparator);
-            Console.WriteLine(strTitle);
-            var strMessage = strTitle + ":";
-
-            foreach (var item in items)
-            {
-                Console.WriteLine("   " + item);
-                strMessage += " " + item;
-            }
-            Console.WriteLine(strSeparator);
-            Console.WriteLine();
-
-            WriteToErrorStream(strMessage);
+            ConsoleMsgUtils.ShowError(message, ex);
         }
 
-        private static void ShowMessage(string strMessage)
+        private static void ShowErrorMessage(string title, IEnumerable<string> errorMessages)
         {
-            const string strSeparator = "------------------------------------------------------------------------------";
-
-            Console.WriteLine();
-            Console.WriteLine(strSeparator);
-            Console.WriteLine(strMessage);
-            Console.WriteLine(strSeparator);
-            Console.WriteLine();
+            ConsoleMsgUtils.ShowErrors(title, errorMessages);
         }
 
         private static void ShowProgramHelp()
@@ -258,8 +225,8 @@ namespace LLRCRunner
                 Console.WriteLine("Version: " + GetAppVersion());
                 Console.WriteLine();
 
-                Console.WriteLine("E-mail: matthew.monroe@pnl.gov or matt@alchemistmatt.com");
-                Console.WriteLine("Website: http://omics.pnl.gov/ or http://www.sysbio.org/resources/staff/");
+                Console.WriteLine("E-mail: matthew.monroe@pnl.gov or proteomics@pnnl.gov");
+                Console.WriteLine("Website: https://omics.pnl.gov/ or https://panomics.pnnl.gov");
                 Console.WriteLine();
 
                 // Delay for 750 msec in case the user double clicked this file from within Windows Explorer (or started the program via a shortcut)
@@ -268,38 +235,9 @@ namespace LLRCRunner
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error displaying the program syntax: " + ex.Message);
+                ShowErrorMessage("Error displaying the program syntax: " + ex.Message, ex);
             }
 
-        }
-
-        private static void WriteToErrorStream(string strErrorMessage)
-        {
-            try
-            {
-                using (var swErrorStream = new System.IO.StreamWriter(Console.OpenStandardError()))
-                {
-                    swErrorStream.WriteLine(strErrorMessage);
-                }
-            }
-            catch
-            {
-                // Ignore errors here
-            }
-        }
-
-        static void ShowErrorMessage(string message, bool pauseAfterError)
-        {
-            Console.WriteLine();
-            Console.WriteLine("===============================================");
-
-            Console.WriteLine(message);
-
-            if (pauseAfterError)
-            {
-                Console.WriteLine("===============================================");
-                System.Threading.Thread.Sleep(1500);
-            }
         }
 
     }
