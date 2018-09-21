@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using LLRC;
 using PRISM;
@@ -10,15 +10,15 @@ namespace LLRCRunner
     // -------------------------------------------------------------------------------
     // Written by Josh Davis and Matthew Monroe for the Department of Energy (PNNL, Richland, WA)
     //
-    // E-mail: matthew.monroe@pnl.gov or matt@alchemistmatt.com
+    // E-mail: matthew.monroe@pnl.gov or proteomics@pnnl.gov
     // Website: http://panomics.pnnl.gov/ or http://omics.pnl.gov or http://www.sysbio.org/resources/staff/
     // -------------------------------------------------------------------------------
-    // 
+    //
 
     internal class Program
     {
 
-        public const string PROGRAM_DATE = "January 6, 2016";
+        public const string PROGRAM_DATE = "September 21, 2018";
 
         protected const string CONNECTION_STRING = "Data Source=gigasax;Initial Catalog=DMS5;Integrated Security=SSPI;";
 
