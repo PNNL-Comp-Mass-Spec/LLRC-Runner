@@ -467,7 +467,7 @@ namespace LLRC
                     {
                         // Wait 1 second to let R close
                         System.Threading.Thread.Sleep(333);
-                        PRISM.Processes.clsProgRunner.GarbageCollectNow();
+                        PRISM.ProgRunner.GarbageCollectNow();
 
                         var post = new Posting(mConnectionString);
                         success = post.PostToDatabase(lstMetricsByDataset, lstValidDatasetIDs, mWorkingDirPath);

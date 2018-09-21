@@ -9,7 +9,7 @@ namespace LLRC
         
         public const string STORED_PROCEDURE = "StoreQCDMResults";
 
-        PRISM.DataBase.clsExecuteDatabaseSP _mExecuteSp;
+        PRISM.ExecuteDatabaseSP _mExecuteSp;
         protected string mConnectionString;
         protected string mErrorMessage;
         protected string mStoredProcedureError;
@@ -314,12 +314,12 @@ namespace LLRC
                     objCommand.Parameters["@ResultsXML"].Value = sXMLResultsClean;
                 }
 
-                _mExecuteSp = new PRISM.DataBase.clsExecuteDatabaseSP(sConnectionString);
+                _mExecuteSp = new PRISM.ExecuteDatabaseSP(sConnectionString);
                 AttachExecuteSpEvents();
 
                 intResult = _mExecuteSp.ExecuteSP(objCommand, maxRetryCount, secBetweenRetries);
 
-                if (intResult == PRISM.DataBase.clsExecuteDatabaseSP.RET_VAL_OK)
+                if (intResult == PRISM.ExecuteDatabaseSP.RET_VAL_OK)
                 {
                     // No errors
                     blnSuccess = true;
@@ -349,7 +349,7 @@ namespace LLRC
         {
             try
             {
-                _mExecuteSp.DBErrorEvent += new PRISM.DataBase.clsExecuteDatabaseSP.DBErrorEventEventHandler(mExecuteSP_DBErrorEvent);
+                _mExecuteSp.ErrorEvent += mExecuteSP_DBErrorEvent;
             }
             catch
             {
@@ -363,7 +363,7 @@ namespace LLRC
             {
                 if (_mExecuteSp != null)
                 {
-                    _mExecuteSp.DBErrorEvent -= mExecuteSP_DBErrorEvent;
+                    _mExecuteSp.ErrorEvent -= mExecuteSP_DBErrorEvent;
                 }
             }
             catch
