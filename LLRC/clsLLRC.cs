@@ -9,7 +9,7 @@ namespace LLRC
 {
     public class LLRCWrapper
     {
-        public const string PROGRAM_DATE = "January 6, 2016";
+        public const string PROGRAM_DATE = "September 21, 2018";
 
         public const string NO_NEW_RECENT_DATASETS = "No new datasets found with new QC values from the last";
 
@@ -21,76 +21,40 @@ namespace LLRC
 
         protected int mMaxResultsToDisplay;         // Only used if mPostToDB is false
         protected bool mPostToDB;
-        protected bool mProcessingTimespan;         // Set this to True if processing a set of DataseIDs from a timespan; when this is true, the code will not report an error if none of the datasets has valid metrics
+        protected bool mProcessingTimespan;         // Set this to True if processing a set of DatasetIDs from a timespan; when this is true, the code will not report an error if none of the datasets has valid metrics
         protected bool mSkipAlreadyProcessedDatasets;
 
         protected string mErrorMessage;
 
         #region "Properties"
-        public string ErrorMessage
-        {
-            get
-            {
-                return mErrorMessage;
-            }
-        }
+        public string ErrorMessage => mErrorMessage;
 
         public int MaxResultsToDisplay
         {
-            get
-            {
-                return mMaxResultsToDisplay;
-            }
-            set
-            {
-                mMaxResultsToDisplay = value;
-            }
+            get => mMaxResultsToDisplay;
+            set => mMaxResultsToDisplay = value;
         }
         public bool PostToDB
         {
-            get
-            {
-                return mPostToDB;
-            }
-            set
-            {
-                mPostToDB = value;
-            }
+            get => mPostToDB;
+            set => mPostToDB = value;
         }
         public bool ProcessingTimespan
         {
-            get
-            {
-                return mProcessingTimespan;
-            }
-            set
-            {
-                mProcessingTimespan = value;
-            }
+            get => mProcessingTimespan;
+            set => mProcessingTimespan = value;
         }
-        
+
         public bool SkipAlreadyProcessedDatasets
         {
-            get
-            {
-                return mSkipAlreadyProcessedDatasets;
-            }
-            set
-            {
-                mSkipAlreadyProcessedDatasets = value;
-            }
+            get => mSkipAlreadyProcessedDatasets;
+            set => mSkipAlreadyProcessedDatasets = value;
         }
 
         public string WorkingDirectory
         {
-            get
-            {
-                return mWorkingDirPath;
-            }
-            set
-            {
-                mWorkingDirPath = value;
-            }
+            get => mWorkingDirPath;
+            set => mWorkingDirPath = value;
         }
         #endregion
 
@@ -193,15 +157,13 @@ namespace LLRC
         /// <returns>The DatasetID as an integer, or 0 if an error</returns>
         public static int GetDatasetIdForMetricRow(List<string> metricsOneDataset)
         {
-            int datasetID;
-
             if (metricsOneDataset == null || metricsOneDataset.Count < DatabaseMang.MetricColumnIndex.DatasetID)
             {
                 Console.WriteLine("GetDatasetIdForMetricRow: metricsOneDataset is invalid");
                 return 0;
             }
 
-            if (!int.TryParse(metricsOneDataset[DatabaseMang.MetricColumnIndex.DatasetID], out datasetID))
+            if (!int.TryParse(metricsOneDataset[DatabaseMang.MetricColumnIndex.DatasetID], out var datasetID))
             {
                 Console.WriteLine("GetDatasetIdForMetricRow: Dataset ID is not an integer; this is unexpected");
                 return 0;
@@ -334,8 +296,7 @@ namespace LLRC
             if (datasetIDList.EndsWith("h"))
             {
                 // Timespan
-                int hours;
-                if (int.TryParse(datasetIDList.Substring(0, datasetIDList.Length - 1), out hours))
+                if (int.TryParse(datasetIDList.Substring(0, datasetIDList.Length - 1), out var hours))
                 {
                     lstDatasetIDs = FindRecentNewDatasets(hours, connectionString);
                     processingTimespan = true;
@@ -345,7 +306,7 @@ namespace LLRC
 
                     return lstDatasetIDs;
                 }
-                
+
                 errorMessage = "Timespan must be of the form \"24h\" or similar: " + datasetIDList;
                 return new List<int>();
             }
@@ -355,7 +316,7 @@ namespace LLRC
                 lstDatasetIDs.Add(value);
                 return lstDatasetIDs;
             }
-            
+
             errorMessage = "DatasetIDList must contain an integer, a list of integers, a range of integers, or a number of hours: " + datasetIDList;
             return new List<int>();
         }
@@ -400,8 +361,8 @@ namespace LLRC
 
                     if (mProcessingTimespan)
                         return true;
-                    else
-                        return false;
+
+                    return false;
                 }
 
                 // Deletes Old files so they don't interfere with new ones
@@ -423,8 +384,8 @@ namespace LLRC
 
                     if (mProcessingTimespan)
                         return true;
-                    else
-                        return false;
+
+                    return false;
                 }
 
                 var success = RunLLRC(mWorkingDirPath, lstValidDatasetIDs.Count);
@@ -541,8 +502,9 @@ namespace LLRC
             var appFolderPath = GetAppFolderPath();
 
             // Runs the batch program
-            var p = new System.Diagnostics.Process();
-            p.StartInfo.FileName = Path.Combine(WorkingDirPath, "RunR.bat");
+            var p = new System.Diagnostics.Process {
+                StartInfo = {FileName = Path.Combine(WorkingDirPath, "RunR.bat")}
+            };
             p.Start();
 
             var scriptOutFilePath = Path.Combine(appFolderPath, "QCDMscript.r.Rout");
@@ -589,7 +551,7 @@ namespace LLRC
                 mErrorMessage = "R exited without error, but the results file does not exist: " + fiResultsFile.Name + " at " + fiResultsFile.FullName;
                 return false;
             }
-            
+
             Console.WriteLine("  LLRC computation complete");
 
             return true;

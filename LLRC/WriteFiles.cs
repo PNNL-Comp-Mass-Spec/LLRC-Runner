@@ -23,7 +23,7 @@ namespace LLRC
         }
 
         /// <summary>
-        /// Appends the metrics for the given dataset to the stringbuilder
+        /// Appends the metrics for the given dataset to the string builder
         /// </summary>
         /// <param name="instrumentGroup"></param>
         /// <param name="metricsOneDataset"></param>
@@ -39,7 +39,7 @@ namespace LLRC
             {
                 return false;
             }
-            
+
             sb.Append(instrumentGroup + ",");
 
             // Append the remaining values
@@ -54,7 +54,7 @@ namespace LLRC
             return true;
         }
 
-                
+
         /// <summary>
         /// Factory method to create a generic list given several values
         /// </summary>
@@ -67,13 +67,13 @@ namespace LLRC
         }
 
         /// <summary>
-        /// Deletes old files so they dont interfere with new ones
+        /// Deletes old files so they don't interfere with new ones
         /// </summary>
         /// <param name="workingDirPath"></param>
         public void DeleteFiles(string workingDirPath)
         {
             var lstFilesToDelete = CreateList("TestingDataset.csv", "data.csv");
-            
+
             foreach (var fileName in lstFilesToDelete)
             {
                 var fiFile = new FileInfo(Path.Combine(workingDirPath, fileName));
@@ -129,11 +129,11 @@ namespace LLRC
         /// <summary>
         /// Writes the batch file to run the .R file
         /// </summary>
-        /// <param name="fileloc"></param>
-        public void WriteBatch(string fileloc)
+        /// <param name="directoryPath"></param>
+        public void WriteBatch(string directoryPath)
         {
-            var contents = '"' + mRProgramPath + '"' + " CMD BATCH --vanilla --slave " + '"' + Path.Combine(fileloc, LLR_SCRIPT_NAME) + '"';
-            File.WriteAllText(Path.Combine(fileloc, "RunR.bat"), contents);
+            var contents = '"' + mRProgramPath + '"' + " CMD BATCH --vanilla --slave " + '"' + Path.Combine(directoryPath, LLR_SCRIPT_NAME) + '"';
+            File.WriteAllText(Path.Combine(directoryPath, "RunR.bat"), contents);
         }
 
         /// <summary>
@@ -155,8 +155,8 @@ namespace LLRC
 
             foreach (var metricsOneDataset in lstMetricsByDataset)
             {
-        
-                // Checks the instrument Catagory and checks to make sure the appropriate columns are present to calculate the results
+
+                // Checks the instrument Category and checks to make sure the appropriate columns are present to calculate the results
                 // If a column is missing the dataset will be skipped
 
                 var instrumentGroup = metricsOneDataset[DatabaseMang.MetricColumnIndex.InstrumentGroup];
@@ -263,19 +263,19 @@ namespace LLRC
         /// <returns></returns>
         public string GetRPathFromWindowsRegistry()
         {
-            const string RCORE_SUBKEY = @"SOFTWARE\R-core";
+            const string R_CORE_KEY_NAME = @"SOFTWARE\R-core";
 
-            var regRCore = Registry.LocalMachine.OpenSubKey(RCORE_SUBKEY);
+            var regRCore = Registry.LocalMachine.OpenSubKey(R_CORE_KEY_NAME);
             if (regRCore == null)
             {
-                throw new ApplicationException("Registry key is not found: " + RCORE_SUBKEY);
+                throw new ApplicationException("Registry key is not found: " + R_CORE_KEY_NAME);
             }
             var is64Bit = Environment.Is64BitProcess;
             var sRSubKey = is64Bit ? "R64" : "R";
             var regR = regRCore.OpenSubKey(sRSubKey);
             if (regR == null)
             {
-                throw new ApplicationException("Registry key is not found: " + RCORE_SUBKEY + @"\" + sRSubKey);
+                throw new ApplicationException("Registry key is not found: " + R_CORE_KEY_NAME + @"\" + sRSubKey);
             }
 
             var currentVersion = new Version((string)regR.GetValue("Current Version"));
@@ -292,7 +292,7 @@ namespace LLRC
                 }
                 else
                     throw new Exception(msg);
-            }            
+            }
 
             var installPath = (string)regR.GetValue("InstallPath");
             var bin = Path.Combine(installPath, "bin");

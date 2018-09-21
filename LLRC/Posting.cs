@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 
@@ -6,7 +6,7 @@ namespace LLRC
 {
     class Posting
     {
-        
+
         public const string STORED_PROCEDURE = "StoreQCDMResults";
 
         PRISM.ExecuteDatabaseSP _mExecuteSp;
@@ -18,20 +18,10 @@ namespace LLRC
         protected List<string> mErrors;
 
         #region "Properties"
-        public List<int> BadDatasetIDs
-        {
-            get
-            {
-                return mBadDatasetIDs;
-            }
-        }
-        public List<string> Errors
-        {
-            get 
-            { 
-                return mErrors; 
-            }
-        }
+        public List<int> BadDatasetIDs => mBadDatasetIDs;
+
+        public List<string> Errors => mErrors;
+
         #endregion
 
         /// <summary>
@@ -49,7 +39,7 @@ namespace LLRC
         {
             mConnectionString = connectionString;
             mErrorMessage = string.Empty;
-            
+
             mBadDatasetIDs = new List<int>();
             mErrors = new List<string>();
 
@@ -91,19 +81,18 @@ namespace LLRC
                             continue;
                         }
 
-                        var smaqcJob = metricsOneDataset[(int)DatabaseMang.MetricColumnIndex.SMAQC_Job];
-                        var quameterJob = metricsOneDataset[(int)DatabaseMang.MetricColumnIndex.Quameter_Job];
-                        var datasetName = metricsOneDataset[(int)DatabaseMang.MetricColumnIndex.DatasetName];
-                        string LLRCPrediction;
+                        var smaqcJob = metricsOneDataset[DatabaseMang.MetricColumnIndex.SMAQC_Job];
+                        var quameterJob = metricsOneDataset[DatabaseMang.MetricColumnIndex.Quameter_Job];
+                        var datasetName = metricsOneDataset[DatabaseMang.MetricColumnIndex.DatasetName];
 
-                        if (!dctResults.TryGetValue(datasetID, out LLRCPrediction))
+                        if (!dctResults.TryGetValue(datasetID, out var llrcPrediction))
                         {
                             Console.WriteLine("LLRC value not computed for DatasetID " + datasetID);
                             continue;
                         }
 
                         // Create XML for posting to the database
-                        var xml = ConvertQcdmtoXml(LLRCPrediction, smaqcJob, quameterJob, datasetName);
+                        var xml = ConvertQcdmtoXml(llrcPrediction, smaqcJob, quameterJob, datasetName);
 
                         //attempts to post to database and returns true or false
                         var success = PostQcdmResultsToDb(datasetID, xml, mConnectionString, STORED_PROCEDURE);
@@ -140,8 +129,8 @@ namespace LLRC
 
             if (mErrors.Count == 0)
                 return true;
-            else
-                return false;
+
+            return false;
         }
 
         //gets the QCDM value from the .csv file that is created from the R program
@@ -156,14 +145,17 @@ namespace LLRC
                 return results;
             }
 
-            using (var srResults = new StreamReader(new FileStream(resultsFilePath, FileMode.Open, FileAccess.Read, FileShare.Read)))
+            using (var reader = new StreamReader(new FileStream(resultsFilePath, FileMode.Open, FileAccess.Read, FileShare.Read)))
             {
                 var headersParsed = false;
                 var colIndexLLRC = -1;
 
-                while (srResults.Peek() > -1)
+                while (!reader.EndOfStream)
                 {
-                    var resultLine = srResults.ReadLine();
+                    var resultLine = reader.ReadLine();
+                    if (string.IsNullOrWhiteSpace(resultLine))
+                        continue;
+
                     var resultValues = resultLine.Split(',');
 
                     if (resultValues.Length < 1)
@@ -185,14 +177,12 @@ namespace LLRC
                     }
                     else
                     {
-                        int datasetID;
-                        double LLRCPrediction;
-
-                        if (int.TryParse(resultValues[(int)DatabaseMang.MetricColumnIndex.DatasetID], out datasetID))
+                        if (int.TryParse(resultValues[DatabaseMang.MetricColumnIndex.DatasetID], out var datasetID))
                         {
-
-                            if (double.TryParse(resultValues[colIndexLLRC], out LLRCPrediction))
+                            if (double.TryParse(resultValues[colIndexLLRC], out _))
                             {
+                                // Yes, it's a double
+                                // Store the string representation
                                 results.Add(datasetID, resultValues[colIndexLLRC]);
                             }
                         }
@@ -204,16 +194,16 @@ namespace LLRC
             return results;
 
         }
-        
+
         /// <summary>
         /// Converts the QCDM to xml to be used by database
         /// </summary>
-        /// <param name="LLRCPrediction"></param>
+        /// <param name="llrcPrediction"></param>
         /// <param name="smaqcJob"></param>
         /// <param name="quameterJob"></param>
         /// <param name="datasetName"></param>
         /// <returns></returns>
-        private string ConvertQcdmtoXml(string LLRCPrediction, string smaqcJob, string quameterJob, string datasetName)
+        private string ConvertQcdmtoXml(string llrcPrediction, string smaqcJob, string quameterJob, string datasetName)
         {
             var sbXml = new System.Text.StringBuilder();
             string sXmlResults;
@@ -232,7 +222,7 @@ namespace LLRC
                 sbXml.Append("<Quameter_Job>" + quameterJob + "</Quameter_Job>");
 
                 sbXml.Append("<Measurements>");
-                sbXml.Append("<Measurement Name=\"" + "QCDM" + "\">" + LLRCPrediction + "</Measurement>");
+                sbXml.Append("<Measurement Name=\"" + "QCDM" + "\">" + llrcPrediction + "</Measurement>");
                 sbXml.Append("</Measurements>");
 
                 sbXml.Append("</QCDM_Results>");
@@ -265,14 +255,7 @@ namespace LLRC
             const int maxRetryCount = 3;
             const int secBetweenRetries = 20;
 
-            var intStartIndex = 0;
-            var intResult = 0;
-
-            string sXMLResultsClean = null;
-
-            System.Data.SqlClient.SqlCommand objCommand;
-
-            var blnSuccess = false;
+            bool blnSuccess;
             mErrorMessage = string.Empty;
             mStoredProcedureError = string.Empty;
 
@@ -284,7 +267,8 @@ namespace LLRC
                 // This line will look like this:
                 //   <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 
-                intStartIndex = sXmlResults.IndexOf("?>");
+                var intStartIndex = sXmlResults.IndexOf("?>", StringComparison.Ordinal);
+                string sXMLResultsClean;
                 if (intStartIndex > 0)
                 {
                     sXMLResultsClean = sXmlResults.Substring(intStartIndex + 2).Trim();
@@ -296,7 +280,7 @@ namespace LLRC
 
                 // Call stored procedure sStoredProcedure using connection string sConnectionString
 
-                objCommand = new System.Data.SqlClient.SqlCommand();
+                var objCommand = new System.Data.SqlClient.SqlCommand();
 
                 {
                     objCommand.CommandType = System.Data.CommandType.StoredProcedure;
@@ -317,7 +301,7 @@ namespace LLRC
                 _mExecuteSp = new PRISM.ExecuteDatabaseSP(sConnectionString);
                 AttachExecuteSpEvents();
 
-                intResult = _mExecuteSp.ExecuteSP(objCommand, maxRetryCount, secBetweenRetries);
+                var intResult = _mExecuteSp.ExecuteSP(objCommand, maxRetryCount, secBetweenRetries);
 
                 if (intResult == PRISM.ExecuteDatabaseSP.RET_VAL_OK)
                 {
@@ -331,7 +315,7 @@ namespace LLRC
                 }
 
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
                 mErrorMessage = "Exception storing QCDM Results in database for DatasetID " + intDatasetId + ": " + ex.Message;
                 blnSuccess = false;
@@ -372,7 +356,7 @@ namespace LLRC
             }
         }
 
-        private void mExecuteSP_DBErrorEvent(string message)
+        private void mExecuteSP_DBErrorEvent(string message, Exception ex)
         {
             mStoredProcedureError = message;
             Console.WriteLine("Stored procedure execution error: " + message);
