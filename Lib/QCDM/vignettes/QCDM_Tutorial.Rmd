@@ -1,0 +1,68 @@
+---
+title: "QCDM_Tutorial"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{QCDM_Tutorial}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+This document is a tutorial for the R package “QCDM”. This acronym stands for “Quality Control Data Metrics”. This document should guide you through the process of reading in data, training the model, and then applying the model on other data. Example code that could be run within R will be in red text. This example assumes that the “QCDM” package has been properly installed into R. After this has been done once, then the user only needs to load this package any time R is restarted. This is done with this code –
+
+`> require(QCDM)`
+
+### STEP 1 - READING IN DATA
+
+This first step uses the *QCDM* function called *readQCdata* to read in the data that contains the curated ratings, so that this data can be used to train the model. This data needs to be a *.csv* file, with no commas in any fields (this is because commas are used as delimiters). After it is read in, it is outputted as an R data object. This R function has two inputs: 1) the name of the *.csv* file, including the paths; and 2) the name of the outputted R data object, including the paths (usually ending in the extension *.Rdata*). The output of the function is to save the data in the *.Rdata* file in the format needed for the training function.
+
+Here is an example of the data. This only includes 2 data metrics (the last 2 columns). The actual data should include many more. The column “Curated_Quality” is necessary and should have this name. The first row has to contain the column names.
+
+Dataset_ID | Acq_Time_Start | Acq_Length | Dataset                                   | Dataset_Type | Curated_Quality | XIC_WideFrac | XIC_FWHM_Q1
+---------- | -------------- | ---------- | ----------------------------------------- | ------------ | --------------- | ------------ | -----------
+263932     | 3/20/2012      | 59         | QC_Shew_11_06_Run-01_20Mar12_Roc_12-02-40 | HMS          | poor            | 0            | 0
+263934     | 3/22/2012      | 59         | QC_Shew_11_06_Run-01_22Mar12_Roc_12-02-40 | HMS          | good            | 0            | 0
+263937     | 3/20/2012      | 59         | QC_Shew_11_06_Run-03_20Mar12_Roc_12-02-42 | HMS          | poor            | 0            | 0
+263938     | 3/21/2012      | 59         | QC_Shew_11_06_Run-03_21Mar12_Roc_12-02-42 | HMS          | good            | 0            | 0
+
+Here is the R code used to perform this step –
+```
+> InputDataName <- “C:/Temp/TrainingData.csv”
+> OutputDataName <- “C:/Temp/TrainingData.Rdata”
+
+> readQCdata(cotDataName=InputDataName, outDataName=OutputDataName)
+```
+
+Note that this was split out into 3 lines of code. The first two lines define the file names. These two lines could have been wrapped into the last line. This would have looked like this –
+
+```
+> readQCdata(cotDataName=“C:/Temp/TrainingData.csv”, outDataName=“C:/Temp/TrainingData.Rdata”)
+```
+
+### STEP 2 - TRAINING THE MODEL
+Once step 1 is completed, step 2 can be done. This step produces the model using a Lasso logistic regression classifier. This step uses the *QCDM* function *trainingLLRC*. The inputs for this function include: 1) the name of the outputted R data object from step 1; 2) the folder in which to save all output; and 3) Kappa, which is the loss function value (default value is 5). The output for this function is saved to a file called *“Models_paper.Rdata”* within the *“output”* folder (input #2). The output is also saved to the object name that is assigned when the function is run (in the example below, it is saved to the object *output*).
+
+Here is the R code used to perform this step –
+
+```
+> output <- trainingLLRC(dataFilename=OutputDataName, outputFolder=”C:/Output/”, optKappa=5)
+```
+
+### STEP 3 – APPLYING MODEL TO OTHER DATA
+Step 3 is used when predictions are needed for additional data that has not been curated. This step uses the *QCDM* function *noncuratedPrediction*. The inputs for this function include: 1) the filename of the additional data in which curated predictions are desired (this data must be in the same format as the original training data); 2) the model’s file name; 3) the name of the outputted R data object from step 1; and 4) the folder in which to save all output. The output consists of *.csv* files and plots and they are stored in the *“output”* folder. The output is also saved to the object name that is assigned when the function is run (in the example below, it is saved to the object *out.nc*.
+
+Here is the R code used to perform this step –
+
+```
+> out.nc <- noncuratedPrediction(ncdataFilename=”C:/temp/TestingData.csv”, modelsFile=paste(outputFolder,”Models_paper.Rdata”,sep=””), dataFilename=“C:/Temp/TrainingData.Rdata”, outputFolder=”C:/Output/”)
+```
+
+
+
+

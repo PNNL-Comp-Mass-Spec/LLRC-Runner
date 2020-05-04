@@ -1,0 +1,19 @@
+Package: QCDM
+Title: QCDM Data
+Version: 2020.05.04
+Authors@R: 
+    person(given = "Brett",
+           family = "Amidan",
+           role = c("aut", "cre"),
+           email = "b.amidan@pnnl.gov")
+Description: Quality Control Data Metrics.
+License: PNNL
+Encoding: UTF-8
+LazyData: true
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.1.0
+Imports: glmnet
+Suggests: 
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr
