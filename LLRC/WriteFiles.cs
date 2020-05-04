@@ -210,7 +210,7 @@ namespace LLRC
                     validMetrics = AppendToCsv("Orbitrap", metricsOneDataset, dctRequiredValues, showWarning, ref sb);
                 }
 
-                if (instrumentGroup.Equals("VelosOrbi") || instrumentGroup.Equals("QExactive"))
+                if (instrumentGroup.Equals("VelosOrbi") || instrumentGroup.Equals("QExactive") || instrumentGroup.Equals("Lumos") || instrumentGroup.Equals("QEHFX"))
                 {
                     validInstrumentGroup = true;
                     dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.XIC_WideFrac, "XIC_WideFrac");
@@ -276,22 +276,6 @@ namespace LLRC
             if (regR == null)
             {
                 throw new ApplicationException("Registry key is not found: " + R_CORE_KEY_NAME + @"\" + sRSubKey);
-            }
-
-            var currentVersion = new Version((string)regR.GetValue("Current Version"));
-
-            if (currentVersion.Major != 2)
-            {
-                var msg = "QCDM is only compatible with R 2.x, not version " + currentVersion.Major + ".x";
-                if (Dns.GetHostName().IndexOf("monroe3", StringComparison.InvariantCultureIgnoreCase) >= 0)
-                {
-                    Console.WriteLine(new string('-',70));
-                    Console.WriteLine("Warning: " + msg);
-                    Console.WriteLine(new string('-', 70));
-                    Console.WriteLine();
-                }
-                else
-                    throw new Exception(msg);
             }
 
             var installPath = (string)regR.GetValue("InstallPath");
