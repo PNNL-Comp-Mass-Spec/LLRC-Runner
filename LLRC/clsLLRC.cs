@@ -483,7 +483,7 @@ namespace LLRC
             // Displays errors if any occur
             catch (Exception e)
             {
-                mErrorMessage = "Error processing the datasets: " + e.Message;
+                mErrorMessage = "Error processing the datasets: " + e.Message + "\n" + e.StackTrace;
                 return false;
             }
 
