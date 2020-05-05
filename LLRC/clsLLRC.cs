@@ -105,8 +105,10 @@ namespace LLRC
                     var command = new SqlCommand(
                          " SELECT Dataset_ID" +
                          " FROM T_Dataset_QC" +
-                         " WHERE (QCDM IS NULL) AND (DATEDIFF(hour, Quameter_Last_Affected, GETDATE()) < " + hours + " OR" +
-                                                   " DATEDIFF(hour, Last_Affected, GETDATE()) < " + hours + ")", connection);
+                         " WHERE (QCDM IS NULL)" +
+                               " AND SMAQC_Job IS NOT NULL" +
+                               " AND (DATEDIFF(hour, Quameter_Last_Affected, GETDATE()) < " + hours + " OR" +
+                                    " DATEDIFF(hour, Last_Affected, GETDATE()) < " + hours + ")", connection);
 
                     using (var drReader = command.ExecuteReader())
                     {
