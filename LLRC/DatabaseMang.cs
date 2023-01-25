@@ -194,14 +194,6 @@ public const string DEFAULT_CONNECTION_STRING = "Data Source=gigasax;Initial Cat
                                     metrics.Add(string.IsNullOrWhiteSpace(GetColumnString(drReader, j)) ? "NA" : drReader[j].ToString());
                                 }
 
-                                /*
-                                    // Temp Hack due to bug in the R code
-                                    if (lstMetrics[MetricColumnIndex.P_2A] == "0")
-                                    {
-                                        Console.WriteLine("  Note: Auto-updated P_2A from 0 to 1 for DatasetID " + datasetID);
-                                        lstMetrics[MetricColumnIndex.P_2A] = "1";
-                                    }
-                                */
                                 metricsByDataset.Add(metrics);
                             }
                         }
