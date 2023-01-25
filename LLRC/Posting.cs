@@ -6,7 +6,6 @@ namespace LLRC
 {
     class Posting
     {
-
         public const string STORED_PROCEDURE = "StoreQCDMResults";
 
         PRISM.ExecuteDatabaseSP _mExecuteSp;
@@ -18,6 +17,7 @@ namespace LLRC
         protected List<string> mErrors;
 
         #region "Properties"
+
         public List<int> BadDatasetIDs => mBadDatasetIDs;
 
         public List<string> Errors => mErrors;
@@ -42,41 +42,37 @@ namespace LLRC
 
             mBadDatasetIDs = new List<int>();
             mErrors = new List<string>();
-
         }
 
         /// <summary>
         /// Posts the QCDM metric to the database
         /// </summary>
-        /// <param name="lstMetricsByDataset"></param>
-        /// <param name="lstValidDatasetIDs"></param>
+        /// <param name="metricsByDataset"></param>
+        /// <param name="validDatasetIDs"></param>
         /// <param name="workingDirPath"></param>
         /// <returns>True if success, false if an error</returns>
         /// <remarks>Use the Errors property of this class to view any errors</remarks>
-        public bool PostToDatabase(List<List<string>> lstMetricsByDataset, SortedSet<int> lstValidDatasetIDs, string workingDirPath)
+        public bool PostToDatabase(List<List<string>> metricsByDataset, SortedSet<int> validDatasetIDs, string workingDirPath)
         {
-
             mErrors.Clear();
 
             try
             {
                 // Cache the QCDMResults
-                var dctResults = CacheQCDMResults(workingDirPath);
+                var results = CacheQCDMResults(workingDirPath);
 
                 try
                 {
-
                     Console.WriteLine();
 
                     mBadDatasetIDs.Clear();
                     mErrors.Clear();
 
-                    foreach (var metricsOneDataset in lstMetricsByDataset)
+                    foreach (var metricsOneDataset in metricsByDataset)
                     {
-
                         var datasetID = LLRCWrapper.GetDatasetIdForMetricRow(metricsOneDataset);
 
-                        if (!lstValidDatasetIDs.Contains(datasetID))
+                        if (!validDatasetIDs.Contains(datasetID))
                         {
                             continue;
                         }
@@ -85,14 +81,14 @@ namespace LLRC
                         var quameterJob = metricsOneDataset[DatabaseMang.MetricColumnIndex.Quameter_Job];
                         var datasetName = metricsOneDataset[DatabaseMang.MetricColumnIndex.DatasetName];
 
-                        if (!dctResults.TryGetValue(datasetID, out var llrcPrediction))
+                        if (!results.TryGetValue(datasetID, out var llrcPrediction))
                         {
                             Console.WriteLine("LLRC value not computed for DatasetID " + datasetID);
                             continue;
                         }
 
                         // Create XML for posting to the database
-                        var xml = ConvertQcdmtoXml(llrcPrediction, smaqcJob, quameterJob, datasetName);
+                        var xml = ConvertQCDMtoXml(llrcPrediction, smaqcJob, quameterJob, datasetName);
 
                         //attempts to post to database and returns true or false
                         var success = PostQcdmResultsToDb(datasetID, xml, mConnectionString, STORED_PROCEDURE);
@@ -105,9 +101,7 @@ namespace LLRC
                                 mErrors.Add(mErrorMessage);
                             else
                                 mErrors.Add(mErrorMessage + "; " + mStoredProcedureError);
-
                         }
-
                     }
                 }
                 catch (Exception ex)
@@ -119,7 +113,6 @@ namespace LLRC
                 {
                     Console.WriteLine("  Successfully posted results");
                 }
-
             }
             catch (Exception ex)
             {
@@ -187,48 +180,44 @@ namespace LLRC
                             }
                         }
                     }
-
                 }
             }
 
             return results;
-
         }
 
         /// <summary>
-        /// Converts the QCDM to xml to be used by database
+        /// Converts the QCDM to XML to be used by database
         /// </summary>
         /// <param name="llrcPrediction"></param>
         /// <param name="smaqcJob"></param>
         /// <param name="quameterJob"></param>
         /// <param name="datasetName"></param>
-        /// <returns></returns>
-        private string ConvertQcdmtoXml(string llrcPrediction, string smaqcJob, string quameterJob, string datasetName)
+        /// <returns>QCDM results, as XML</returns>
+        private string ConvertQCDMtoXml(string llrcPrediction, string smaqcJob, string quameterJob, string datasetName)
         {
-            var sbXml = new System.Text.StringBuilder();
-            string sXmlResults;
+            var xmlResults = new System.Text.StringBuilder();
 
             try
             {
-                sbXml.Append("<?xml version=\"1.0\" encoding=\"utf-8\" standalone=\"yes\"?>");
-                sbXml.Append("<QCDM_Results>");
+                xmlResults.Append("<?xml version=\"1.0\" encoding=\"utf-8\" standalone=\"yes\"?>");
+                xmlResults.Append("<QCDM_Results>");
 
-                sbXml.Append("<Dataset>" + datasetName + "</Dataset>");
+                xmlResults.AppendFormat("<Dataset>{0}</Dataset>", datasetName);
                 if (smaqcJob == "NA")
                 {
                     smaqcJob = "0";
                 }
-                sbXml.Append("<SMAQC_Job>" + smaqcJob + "</SMAQC_Job>");
-                sbXml.Append("<Quameter_Job>" + quameterJob + "</Quameter_Job>");
+                xmlResults.AppendFormat("<SMAQC_Job>{0}</SMAQC_Job>", smaqcJob);
+                xmlResults.AppendFormat("<Quameter_Job>{0}</Quameter_Job>", quameterJob);
 
-                sbXml.Append("<Measurements>");
-                sbXml.Append("<Measurement Name=\"" + "QCDM" + "\">" + llrcPrediction + "</Measurement>");
-                sbXml.Append("</Measurements>");
+                xmlResults.Append("<Measurements>");
+                xmlResults.AppendFormat("<Measurement Name=\"QCDM\">{0}</Measurement>", llrcPrediction);
+                xmlResults.Append("</Measurements>");
 
-                sbXml.Append("</QCDM_Results>");
+                xmlResults.Append("</QCDM_Results>");
 
-                sXmlResults = sbXml.ToString();
-
+                return xmlResults.ToString();
             }
             catch (Exception ex)
             {
@@ -236,89 +225,85 @@ namespace LLRC
                 Console.WriteLine(ex);
                 return string.Empty;
             }
-
-            return sXmlResults;
-
         }
 
         /// <summary>
         /// Posts the xml to the database
         /// </summary>
-        /// <param name="intDatasetId"></param>
-        /// <param name="sXmlResults"></param>
-        /// <param name="sConnectionString"></param>
-        /// <param name="sStoredProcedure"></param>
-        /// <returns></returns>
-        protected bool PostQcdmResultsToDb(int intDatasetId, string sXmlResults, string sConnectionString, string sStoredProcedure)
+        /// <param name="datasetId"></param>
+        /// <param name="xmlResults"></param>
+        /// <param name="connectionString"></param>
+        /// <param name="storedProcedure"></param>
+        /// <returns>True if successful, false if an error</returns>
+        protected bool PostQcdmResultsToDb(int datasetId, string xmlResults, string connectionString, string storedProcedure)
         {
-
             const int maxRetryCount = 3;
             const int secBetweenRetries = 20;
 
-            bool blnSuccess;
+            bool success;
             mErrorMessage = string.Empty;
             mStoredProcedureError = string.Empty;
 
             try
             {
-                Console.WriteLine("Posting QCDM Results to the database for Dataset ID " + intDatasetId);
+                Console.WriteLine("Posting QCDM Results to the database for Dataset ID " + datasetId);
 
                 // We need to remove the encoding line from sXMLResults before posting to the DB
                 // This line will look like this:
                 //   <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 
-                var intStartIndex = sXmlResults.IndexOf("?>", StringComparison.Ordinal);
-                string sXMLResultsClean;
-                if (intStartIndex > 0)
+                var startIndex = xmlResults.IndexOf("?>", StringComparison.Ordinal);
+                string xmlResultsClean;
+
+                if (startIndex > 0)
                 {
-                    sXMLResultsClean = sXmlResults.Substring(intStartIndex + 2).Trim();
+                    xmlResultsClean = xmlResults.Substring(startIndex + 2).Trim();
                 }
                 else
                 {
-                    sXMLResultsClean = sXmlResults;
+                    xmlResultsClean = xmlResults;
                 }
 
-                // Call stored procedure sStoredProcedure using connection string sConnectionString
+                // Call the stored procedure
 
-                var objCommand = new System.Data.SqlClient.SqlCommand();
+                var dbCommand = new System.Data.SqlClient.SqlCommand();
 
                 {
-                    objCommand.CommandType = System.Data.CommandType.StoredProcedure;
-                    objCommand.CommandText = sStoredProcedure;
+                    dbCommand.CommandType = System.Data.CommandType.StoredProcedure;
+                    dbCommand.CommandText = storedProcedure;
 
-                    objCommand.Parameters.Add(new System.Data.SqlClient.SqlParameter("@Return", System.Data.SqlDbType.Int));
-                    objCommand.Parameters["@Return"].Direction = System.Data.ParameterDirection.ReturnValue;
+                    dbCommand.Parameters.Add(new System.Data.SqlClient.SqlParameter("@Return", System.Data.SqlDbType.Int));
+                    dbCommand.Parameters["@Return"].Direction = System.Data.ParameterDirection.ReturnValue;
 
-                    objCommand.Parameters.Add(new System.Data.SqlClient.SqlParameter("@DatasetID", System.Data.SqlDbType.Int));
-                    objCommand.Parameters["@DatasetID"].Direction = System.Data.ParameterDirection.Input;
-                    objCommand.Parameters["@DatasetID"].Value = intDatasetId;
+                    dbCommand.Parameters.Add(new System.Data.SqlClient.SqlParameter("@DatasetID", System.Data.SqlDbType.Int));
+                    dbCommand.Parameters["@DatasetID"].Direction = System.Data.ParameterDirection.Input;
+                    dbCommand.Parameters["@DatasetID"].Value = datasetId;
 
-                    objCommand.Parameters.Add(new System.Data.SqlClient.SqlParameter("@ResultsXML", System.Data.SqlDbType.Xml));
-                    objCommand.Parameters["@ResultsXML"].Direction = System.Data.ParameterDirection.Input;
-                    objCommand.Parameters["@ResultsXML"].Value = sXMLResultsClean;
+                    dbCommand.Parameters.Add(new System.Data.SqlClient.SqlParameter("@ResultsXML", System.Data.SqlDbType.Xml));
+                    dbCommand.Parameters["@ResultsXML"].Direction = System.Data.ParameterDirection.Input;
+                    dbCommand.Parameters["@ResultsXML"].Value = xmlResultsClean;
                 }
 
-                _mExecuteSp = new PRISM.ExecuteDatabaseSP(sConnectionString);
+                _mExecuteSp = new PRISM.ExecuteDatabaseSP(connectionString);
                 AttachExecuteSpEvents();
 
-                var intResult = _mExecuteSp.ExecuteSP(objCommand, maxRetryCount, secBetweenRetries);
+                var result = _mExecuteSp.ExecuteSP(dbCommand, maxRetryCount, secBetweenRetries);
 
-                if (intResult == PRISM.ExecuteDatabaseSP.RET_VAL_OK)
+                if (result == PRISM.ExecuteDatabaseSP.RET_VAL_OK)
                 {
                     // No errors
-                    blnSuccess = true;
+                    success = true;
                 }
                 else
                 {
-                    mErrorMessage = "Error storing QCDM Results in database for DatasetID " + intDatasetId + ": " + sStoredProcedure + " returned " + intResult;
-                    blnSuccess = false;
+                    mErrorMessage = "Error storing QCDM Results in database for DatasetID " + datasetId + ": " + storedProcedure + " returned " + result;
+                    success = false;
                 }
-
             }
             catch (Exception ex)
             {
-                mErrorMessage = "Exception storing QCDM Results in database for DatasetID " + intDatasetId + ": " + ex.Message;
-                blnSuccess = false;
+                mErrorMessage = "Exception storing QCDM Results in database for DatasetID " + datasetId + ": " + ex.Message;
+                success = false;
             }
             finally
             {
@@ -326,7 +311,7 @@ namespace LLRC
                 _mExecuteSp = null;
             }
 
-            return blnSuccess;
+            return success;
         }
 
         private void AttachExecuteSpEvents()

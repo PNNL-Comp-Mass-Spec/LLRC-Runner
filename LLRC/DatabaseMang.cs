@@ -66,7 +66,7 @@ public const string DEFAULT_CONNECTION_STRING = "Data Source=gigasax;Initial Cat
         public DatabaseMang(string connectionString)
         {
             if (string.IsNullOrEmpty(connectionString))
-                connectionString = DEFAULT_CONNECTION_STRING;           
+                connectionString = DEFAULT_CONNECTION_STRING;
 
             mConnection = new SqlConnection(connectionString);
             mErrorMessage = string.Empty;
@@ -112,7 +112,6 @@ public const string DEFAULT_CONNECTION_STRING = "Data Source=gigasax;Initial Cat
             {
                 return drReader[colIndex].ToString();
             }
-
         }
         /// <summary>
         /// Retrieves Data from database for the given datasetIDs
@@ -125,29 +124,28 @@ public const string DEFAULT_CONNECTION_STRING = "Data Source=gigasax;Initial Cat
             const int CHUNK_SIZE = 500;
 
             var datasetIDsWithMetrics = new SortedSet<int>();
-            var lstMetricsByDataset = new List<List<string>>();
-            var sbDatasets = new System.Text.StringBuilder();
+            var metricsByDataset = new List<List<string>>();
+            var datasets = new System.Text.StringBuilder();
 
             // Open the database connection
             if (!Open())
                 return new List<List<string>>();
 
-            var dtStartTime = DateTime.UtcNow;
-            var dtLastProgress = DateTime.UtcNow;
+            var startTime = DateTime.UtcNow;
+            var lastProgress = DateTime.UtcNow;
             var showProgress = false;
 
             // Process the datasets in chunks, 500 datasets at a time
             for (var i = 0; i < datasetIDs.Count; i += CHUNK_SIZE)
             {
-
                 // Construct a comma-separated list of dataset IDs
-                sbDatasets.Clear();
+                datasets.Clear();
                 for (var j = i; j < i + CHUNK_SIZE && j < datasetIDs.Count; j += 1)
                 {
-                    if (sbDatasets.Length > 0)
-                        sbDatasets.Append(",");
+                    if (datasets.Length > 0)
+                        datasets.Append(",");
 
-                    sbDatasets.Append(datasetIDs[j]);
+                    datasets.Append(datasetIDs[j]);
                 }
 
                 try
@@ -177,12 +175,11 @@ public const string DEFAULT_CONNECTION_STRING = "Data Source=gigasax;Initial Cat
 
                     if (drReader.HasRows)
                     {
-                        // Append the data to lstMetricsByDataset
+                        // Append the data to metricsByDataset
                         // Converts empty values to NA
                         while (drReader.Read())
                         {
-                            int datasetID;
-                            if (!int.TryParse(GetColumnString(drReader, 1), out datasetID))
+                            if (!int.TryParse(GetColumnString(drReader, 1), out var datasetID))
                             {
                                 Console.WriteLine("Null dataset ID value found in GetData; this is unexpected");
                             }
@@ -190,10 +187,11 @@ public const string DEFAULT_CONNECTION_STRING = "Data Source=gigasax;Initial Cat
                             {
                                 datasetIDsWithMetrics.Add(datasetID);
 
-                                var lstMetrics = new List<string>();
+                                var metrics = new List<string>();
+
                                 for (var j = 0; j < drReader.FieldCount; j++)
                                 {
-                                    lstMetrics.Add(string.IsNullOrWhiteSpace(GetColumnString(drReader, j)) ? "NA" : drReader[j].ToString());
+                                    metrics.Add(string.IsNullOrWhiteSpace(GetColumnString(drReader, j)) ? "NA" : drReader[j].ToString());
                                 }
 
                                 /*
@@ -204,11 +202,9 @@ public const string DEFAULT_CONNECTION_STRING = "Data Source=gigasax;Initial Cat
                                         lstMetrics[MetricColumnIndex.P_2A] = "1";
                                     }
                                 */
-
-                                lstMetricsByDataset.Add(lstMetrics);
+                                metricsByDataset.Add(metrics);
                             }
                         }
-
                     }
 
                     drReader.Close();
@@ -219,14 +215,14 @@ public const string DEFAULT_CONNECTION_STRING = "Data Source=gigasax;Initial Cat
                     return new List<List<string>>();
                 }
 
-                if (DateTime.UtcNow.Subtract(dtStartTime).TotalSeconds >= 1 && i + CHUNK_SIZE < datasetIDs.Count)
+                if (DateTime.UtcNow.Subtract(startTime).TotalSeconds >= 1 && i + CHUNK_SIZE < datasetIDs.Count)
                     showProgress = true;
 
-                if (showProgress && DateTime.UtcNow.Subtract(dtLastProgress).TotalMilliseconds >= 333)
+                if (showProgress && DateTime.UtcNow.Subtract(lastProgress).TotalMilliseconds >= 333)
                 {
                     var percentComplete = (i + CHUNK_SIZE) / (double)datasetIDs.Count * 100;
                     Console.WriteLine("Retrieving metrics from the database: " + percentComplete.ToString("0.0") + "% complete");
-                    dtLastProgress = DateTime.UtcNow;
+                    lastProgress = DateTime.UtcNow;
                 }
             }
 
@@ -239,7 +235,6 @@ public const string DEFAULT_CONNECTION_STRING = "Data Source=gigasax;Initial Cat
                     warnCount += 1;
                     if (warnCount <= 10)
                         Console.WriteLine("Warning: DatasetID does not have QC Metrics: " + datasetID);
-                    
                 }
             }
 
@@ -247,17 +242,15 @@ public const string DEFAULT_CONNECTION_STRING = "Data Source=gigasax;Initial Cat
                 Console.WriteLine(" ... " + (warnCount - 10) + " additional warnings not shown");
 
             if (datasetIDs.Count > 1)
-                Console.WriteLine("\nRetrieved dataset metrics for " + lstMetricsByDataset.Count + " / " + datasetIDs.Count + " datasets");
+                Console.WriteLine("\nRetrieved dataset metrics for " + metricsByDataset.Count + " / " + datasetIDs.Count + " datasets");
 
             Console.WriteLine();
 
             // Close connection
             Close();
 
-            return lstMetricsByDataset;
+            return metricsByDataset;
         }
-      
     }
 
-    
 }

@@ -17,7 +17,6 @@ namespace LLRCRunner
 
     internal class Program
     {
-
         public const string PROGRAM_DATE = "September 21, 2018";
 
         protected const string CONNECTION_STRING = "Data Source=gigasax;Initial Catalog=DMS5;Integrated Security=SSPI;";
@@ -32,7 +31,7 @@ namespace LLRCRunner
 
         public static int Main(string[] args)
         {
-            var objParseCommandLine = new clsParseCommandLine();
+            var commandLineParser = new clsParseCommandLine();
 
             mDatasetIDList = string.Empty;
             mWorkingDirectory = string.Empty;
@@ -44,26 +43,25 @@ namespace LLRCRunner
             {
                 var success = false;
 
-                if (objParseCommandLine.ParseCommandLine())
+                if (commandLineParser.ParseCommandLine())
                 {
-                    if (SetOptionsUsingCommandLineParameters(objParseCommandLine))
+                    if (SetOptionsUsingCommandLineParameters(commandLineParser))
                         success = true;
                 }
 
                 if (!success ||
-                    objParseCommandLine.NeedToShowHelp ||
-                    objParseCommandLine.ParameterCount + objParseCommandLine.NonSwitchParameterCount == 0 ||
+                    commandLineParser.NeedToShowHelp ||
+                    commandLineParser.ParameterCount + commandLineParser.NonSwitchParameterCount == 0 ||
                     mDatasetIDList.Length == 0)
                 {
                     ShowProgramHelp();
                     return -1;
-
                 }
 
                 // Parse the dataset ID list
-                var lstDatasetIDs = LLRCWrapper.ParseDatasetIDList(mDatasetIDList, CONNECTION_STRING, out var errorMessage, out var processingTimespan);
+                var datasetIDs = LLRCWrapper.ParseDatasetIDList(mDatasetIDList, CONNECTION_STRING, out var errorMessage, out var processingTimespan);
 
-                if (lstDatasetIDs.Count == 0)
+                if (datasetIDs.Count == 0)
                 {
                     if (errorMessage.StartsWith(LLRCWrapper.NO_NEW_RECENT_DATASETS))
                     {
@@ -79,7 +77,7 @@ namespace LLRCRunner
                     return -2;
                 }
 
-                var oProcessingClass = new LLRCWrapper
+                var processingClass = new LLRCWrapper
                 {
                     MaxResultsToDisplay = mMaxResultsToDisplay,
                     PostToDB = mPostToDB,
@@ -88,16 +86,16 @@ namespace LLRCRunner
                 };
 
                 if (!string.IsNullOrWhiteSpace(mWorkingDirectory))
-                    oProcessingClass.WorkingDirectory = mWorkingDirectory;
+                    processingClass.WorkingDirectory = mWorkingDirectory;
 
-                success = oProcessingClass.ProcessDatasets(lstDatasetIDs);
+                success = processingClass.ProcessDatasets(datasetIDs);
 
                 if (!success)
                 {
-                    if (oProcessingClass.ErrorMessage.StartsWith("Error processing the datasets"))
-                        ShowErrorMessage(oProcessingClass.ErrorMessage);
+                    if (processingClass.ErrorMessage.StartsWith("Error processing the datasets"))
+                        ShowErrorMessage(processingClass.ErrorMessage);
                     else
-                        ShowErrorMessage("Error processing the datasets: " + oProcessingClass.ErrorMessage);
+                        ShowErrorMessage("Error processing the datasets: " + processingClass.ErrorMessage);
 
                     return -3;
                 }
@@ -116,19 +114,19 @@ namespace LLRCRunner
             return System.Reflection.Assembly.GetExecutingAssembly().GetName().Version + " (" + PROGRAM_DATE + ")";
         }
 
-        private static bool SetOptionsUsingCommandLineParameters(clsParseCommandLine objParseCommandLine)
+        private static bool SetOptionsUsingCommandLineParameters(clsParseCommandLine commandLineParser)
         {
             // Returns True if no problems; otherwise, returns false
 
-            var lstValidParameters = new List<string> { "I", "W", "DB", "Skip", "Display" };
+            var validParameters = new List<string> { "I", "W", "DB", "Skip", "Display" };
 
             try
             {
                 // Make sure no invalid parameters are present
-                if (objParseCommandLine.InvalidParametersPresent(lstValidParameters))
+                if (commandLineParser.InvalidParametersPresent(validParameters))
                 {
                     var badArguments = new List<string>();
-                    foreach (var item in objParseCommandLine.InvalidParameters(lstValidParameters))
+                    foreach (var item in commandLineParser.InvalidParameters(validParameters))
                     {
                         badArguments.Add("/" + item);
                     }
@@ -138,39 +136,38 @@ namespace LLRCRunner
                     return false;
                 }
 
-                // Query objParseCommandLine to see if various parameters are present
-                if (objParseCommandLine.RetrieveValueForParameter("I", out var strValue))
+                // Query commandLineParser to see if various parameters are present
+                if (commandLineParser.RetrieveValueForParameter("I", out var datasetIDs))
                 {
-                    mDatasetIDList = string.Copy(strValue);
+                    mDatasetIDList = string.Copy(datasetIDs);
                 }
-                else if (objParseCommandLine.NonSwitchParameterCount > 0)
+                else if (commandLineParser.NonSwitchParameterCount > 0)
                 {
-                    mDatasetIDList = objParseCommandLine.RetrieveNonSwitchParameter(0);
-                }
-
-                if (objParseCommandLine.RetrieveValueForParameter("W", out strValue))
-                {
-                    mWorkingDirectory = string.Copy(strValue);
+                    mDatasetIDList = commandLineParser.RetrieveNonSwitchParameter(0);
                 }
 
-                if (objParseCommandLine.IsParameterPresent("DB"))
+                if (commandLineParser.RetrieveValueForParameter("W", out var workingDirectory))
+                {
+                    mWorkingDirectory = string.Copy(workingDirectory);
+                }
+
+                if (commandLineParser.IsParameterPresent("DB"))
                 {
                     mPostToDB = true;
                 }
 
-                if (objParseCommandLine.IsParameterPresent("Skip"))
+                if (commandLineParser.IsParameterPresent("Skip"))
                 {
                     mSkipAlreadyProcessedDatasets = true;
                 }
 
-                if (objParseCommandLine.RetrieveValueForParameter("Display", out strValue))
+                if (commandLineParser.RetrieveValueForParameter("Display", out var maxResultsToDisplay))
                 {
-                    if (int.TryParse(strValue, out var intValue))
-                        mMaxResultsToDisplay = intValue;
+                    if (int.TryParse(maxResultsToDisplay, out var maxResults))
+                        mMaxResultsToDisplay = maxResults;
                 }
 
                 return true;
-
 
             }
             catch (Exception ex)
@@ -221,24 +218,21 @@ namespace LLRCRunner
                 Console.WriteLine("\"New\" datasets are those with null QCDM values in the T_Dataset_QC table");
 
                 Console.WriteLine();
-                Console.WriteLine("Program written by Joshua Davis and Matthew Monroe for the Department of Energy (PNNL, Richland, WA) in 2013");
+                Console.WriteLine("Program written by Joshua Davis and Matthew Monroe for the Department of Energy (PNNL, Richland, WA)");
                 Console.WriteLine("Version: " + GetAppVersion());
                 Console.WriteLine();
 
                 Console.WriteLine("E-mail: matthew.monroe@pnl.gov or proteomics@pnnl.gov");
-                Console.WriteLine("Website: https://omics.pnl.gov/ or https://panomics.pnnl.gov");
+                Console.WriteLine("Website: https://github.com/PNNL-Comp-Mass-Spec/ or https://panomics.pnnl.gov/ or https://www.pnnl.gov/integrative-omics");
                 Console.WriteLine();
 
                 // Delay for 750 msec in case the user double clicked this file from within Windows Explorer (or started the program via a shortcut)
                 System.Threading.Thread.Sleep(750);
-
             }
             catch (Exception ex)
             {
                 ShowErrorMessage("Error displaying the program syntax: " + ex.Message, ex);
             }
-
         }
-
     }
 }

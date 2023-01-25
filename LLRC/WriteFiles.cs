@@ -27,15 +27,15 @@ namespace LLRC
         /// </summary>
         /// <param name="instrumentGroup"></param>
         /// <param name="metricsOneDataset"></param>
-        /// <param name="dctRequiredValues"></param>
+        /// <param name="requiredValues"></param>
         /// <param name="showWarning"></param>
         /// <param name="sb"></param>
         /// <returns>True if hte metrics are valid, otherwise false</returns>
-        protected bool AppendToCsv(string instrumentGroup, List<string> metricsOneDataset, Dictionary<int, string> dctRequiredValues, bool showWarning, ref StringBuilder sb)
+        protected bool AppendToCsv(string instrumentGroup, List<string> metricsOneDataset, Dictionary<int, string> requiredValues, bool showWarning, ref StringBuilder sb)
         {
             var datasetID = LLRCWrapper.GetDatasetIdForMetricRow(metricsOneDataset);
 
-            if (RowIsMissingValues(datasetID, metricsOneDataset, dctRequiredValues, showWarning))
+            if (RowIsMissingValues(datasetID, metricsOneDataset, requiredValues, showWarning))
             {
                 return false;
             }
@@ -72,28 +72,27 @@ namespace LLRC
         /// <param name="workingDirPath"></param>
         public void DeleteFiles(string workingDirPath)
         {
-            var lstFilesToDelete = CreateList("TestingDataset.csv", "data.csv");
+            var filesToDelete = CreateList("TestingDataset.csv", "data.csv");
 
-            foreach (var fileName in lstFilesToDelete)
+            foreach (var fileName in filesToDelete)
             {
-                var fiFile = new FileInfo(Path.Combine(workingDirPath, fileName));
-                if (fiFile.Exists)
-                    fiFile.Delete();
+                var targetFile = new FileInfo(Path.Combine(workingDirPath, fileName));
+                if (targetFile.Exists)
+                    targetFile.Delete();
             }
-
         }
 
         /// <summary>
-        /// Examines the data in row to determine if any of the columns in dctRequiredValues is not numeric
+        /// Examines the data in row to determine if any of the columns in requiredValues is not numeric
         /// </summary>
         /// <param name="datasetID"></param>
         /// <param name="row"></param>
-        /// <param name="dctRequiredValues"></param>
+        /// <param name="requiredValues"></param>
         /// <param name="showWarning"></param>
         /// <returns>True if one or more columns is missing a value, false if no problems</returns>
-        protected bool RowIsMissingValues(int datasetID, List<string> row, Dictionary<int, string> dctRequiredValues, bool showWarning)
+        protected bool RowIsMissingValues(int datasetID, List<string> row, Dictionary<int, string> requiredValues, bool showWarning)
         {
-            foreach (var item in dctRequiredValues)
+            foreach (var item in requiredValues)
             {
                 if (string.IsNullOrWhiteSpace(row[item.Key]) || row[item.Key] == "NA")
                 {
@@ -139,23 +138,21 @@ namespace LLRC
         /// <summary>
         /// Writes the data from the database into a .csv file to be used in the R program
         /// </summary>
-        /// <param name="lstMetricsByDataset"></param>
+        /// <param name="metricsByDataset"></param>
         /// <param name="workingDirPath"></param>
         /// <returns>The list of valid dataset IDs</returns>
-        public SortedSet<int> WriteCsv(List<List<string>> lstMetricsByDataset, string workingDirPath)
+        public SortedSet<int> WriteCsv(List<List<string>> metricsByDataset, string workingDirPath)
         {
-
             var sb = new StringBuilder();
             sb.AppendLine(HEADER_LINE);
 
-            var lstValidDatasetIDs = new SortedSet<int>();
+            var validDatasetIDs = new SortedSet<int>();
             var showWarning = true;
             var warnCount = 0;
             var instrumentWarnCount = 0;
 
-            foreach (var metricsOneDataset in lstMetricsByDataset)
+            foreach (var metricsOneDataset in metricsByDataset)
             {
-
                 // Checks the instrument Category and checks to make sure the appropriate columns are present to calculate the results
                 // If a column is missing the dataset will be skipped
 
@@ -168,62 +165,62 @@ namespace LLRC
                     continue;
                 }
 
-                var dctRequiredValues = new Dictionary<int, string>();
+                var requiredValues = new Dictionary<int, string>();
 
                 var validMetrics = false;
 
                 if (instrumentGroup.Equals("LTQ") || instrumentGroup.Equals("LTQ-ETD") || instrumentGroup.Equals("LTQ-Prep") || instrumentGroup.Equals("VelosPro"))
                 {
                     validInstrumentGroup = true;
-                    dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.XIC_WideFrac, "XIC_WideFrac");
-                    dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.MS2_Density_Q1, "MS2_4B");
-                    dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.P_2C, "P_2C");
+                    requiredValues.Add(DatabaseMang.MetricColumnIndex.XIC_WideFrac, "XIC_WideFrac");
+                    requiredValues.Add(DatabaseMang.MetricColumnIndex.MS2_Density_Q1, "MS2_4B");
+                    requiredValues.Add(DatabaseMang.MetricColumnIndex.P_2C, "P_2C");
 
-                    validMetrics = AppendToCsv("LTQ_IonTrap", metricsOneDataset, dctRequiredValues, showWarning, ref sb);
+                    validMetrics = AppendToCsv("LTQ_IonTrap", metricsOneDataset, requiredValues, showWarning, ref sb);
                 }
 
                 if (instrumentGroup.Equals("Exactive"))
                 {
                     validInstrumentGroup = true;
-                    dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.MS1_TIC_Q2, "MS1_TIC_Q2");
-                    dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.MS1_Density_Q1, "MS1_Density_Q1");
+                    requiredValues.Add(DatabaseMang.MetricColumnIndex.MS1_TIC_Q2, "MS1_TIC_Q2");
+                    requiredValues.Add(DatabaseMang.MetricColumnIndex.MS1_Density_Q1, "MS1_Density_Q1");
 
-                    validMetrics = AppendToCsv("Exactive", metricsOneDataset, dctRequiredValues, showWarning, ref sb);
+                    validMetrics = AppendToCsv("Exactive", metricsOneDataset, requiredValues, showWarning, ref sb);
                 }
 
                 if (instrumentGroup.Equals("LTQ-FT") || instrumentGroup.Equals("Orbitrap"))
                 {
                     validInstrumentGroup = true;
-                    dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.XIC_WideFrac, "XIC_WideFrac");
-                    dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.XIC_Height_Q4, "XIC_Height_Q4");
-                    dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.MS1_TIC_Change_Q2, "MS1_TIC_Change_Q2");
-                    dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.MS1_Density_Q2, "MS1_Density_Q2");
-                    dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.DS_1A, "DS_1A");
-                    dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.DS_2A, "DS_2A");
-                    dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.IS_1A, "IS_1A");
-                    dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.IS_3A, "IS_3A");
-                    dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.MS2_1, "MS2_1");
-                    dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.MS2_4A, "MS2_4A");
-                    dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.MS2_4B, "MS2_4B");
-                    dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.P_2B, "P_2B");
+                    requiredValues.Add(DatabaseMang.MetricColumnIndex.XIC_WideFrac, "XIC_WideFrac");
+                    requiredValues.Add(DatabaseMang.MetricColumnIndex.XIC_Height_Q4, "XIC_Height_Q4");
+                    requiredValues.Add(DatabaseMang.MetricColumnIndex.MS1_TIC_Change_Q2, "MS1_TIC_Change_Q2");
+                    requiredValues.Add(DatabaseMang.MetricColumnIndex.MS1_Density_Q2, "MS1_Density_Q2");
+                    requiredValues.Add(DatabaseMang.MetricColumnIndex.DS_1A, "DS_1A");
+                    requiredValues.Add(DatabaseMang.MetricColumnIndex.DS_2A, "DS_2A");
+                    requiredValues.Add(DatabaseMang.MetricColumnIndex.IS_1A, "IS_1A");
+                    requiredValues.Add(DatabaseMang.MetricColumnIndex.IS_3A, "IS_3A");
+                    requiredValues.Add(DatabaseMang.MetricColumnIndex.MS2_1, "MS2_1");
+                    requiredValues.Add(DatabaseMang.MetricColumnIndex.MS2_4A, "MS2_4A");
+                    requiredValues.Add(DatabaseMang.MetricColumnIndex.MS2_4B, "MS2_4B");
+                    requiredValues.Add(DatabaseMang.MetricColumnIndex.P_2B, "P_2B");
 
-                    validMetrics = AppendToCsv("Orbitrap", metricsOneDataset, dctRequiredValues, showWarning, ref sb);
+                    validMetrics = AppendToCsv("Orbitrap", metricsOneDataset, requiredValues, showWarning, ref sb);
                 }
 
                 if (instrumentGroup.Equals("VelosOrbi") || instrumentGroup.Equals("QExactive") || instrumentGroup.Equals("Lumos") || instrumentGroup.Equals("QEHFX"))
                 {
                     validInstrumentGroup = true;
-                    dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.XIC_WideFrac, "XIC_WideFrac");
-                    dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.MS2_4A, "MS2_4A");
-                    dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.MS2_4B, "MS2_4B");
-                    dctRequiredValues.Add(DatabaseMang.MetricColumnIndex.P_2B, "P_2B");
+                    requiredValues.Add(DatabaseMang.MetricColumnIndex.XIC_WideFrac, "XIC_WideFrac");
+                    requiredValues.Add(DatabaseMang.MetricColumnIndex.MS2_4A, "MS2_4A");
+                    requiredValues.Add(DatabaseMang.MetricColumnIndex.MS2_4B, "MS2_4B");
+                    requiredValues.Add(DatabaseMang.MetricColumnIndex.P_2B, "P_2B");
 
-                    validMetrics = AppendToCsv("VOrbitrap", metricsOneDataset, dctRequiredValues, showWarning, ref sb);
+                    validMetrics = AppendToCsv("VOrbitrap", metricsOneDataset, requiredValues, showWarning, ref sb);
                 }
 
                 if (validMetrics)
                 {
-                    lstValidDatasetIDs.Add(datasetID);
+                    validDatasetIDs.Add(datasetID);
                 }
                 else
                 {
@@ -254,7 +251,7 @@ namespace LLRC
                 Console.WriteLine(" ... " + (instrumentWarnCount - 10) + " additional instrument warnings not shown");
             }
 
-            return lstValidDatasetIDs;
+            return validDatasetIDs;
         }
 
         /// <summary>
