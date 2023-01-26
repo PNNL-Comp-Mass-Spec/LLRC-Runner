@@ -129,12 +129,16 @@ namespace LLRC
                     if (logText.Contains("there is no package called 'QCDM'") || logText.Contains("Execution halted"))
                     {
                         mErrorMessage = "Error with R: " + logText;
+                        OnErrorEvent(mErrorMessage);
+
                         return true;
                     }
 
                     if (logText.StartsWith("Error in "))
                     {
                         mErrorMessage = "Error with R: " + logText;
+                        OnErrorEvent(mErrorMessage);
+
                         return true;
                     }
                 }
@@ -277,6 +281,7 @@ namespace LLRC
                     {
                         mErrorMessage = "Required input file not found: " + filename + " at " + WorkingDirectory;
 
+                        OnErrorEvent(mErrorMessage);
                         return false;
                     }
                 }
@@ -292,6 +297,7 @@ namespace LLRC
                 if (metricsByDataset.Count == 0)
                 {
                     mErrorMessage = "No Metrics were found for the given Datasets IDs";
+                    OnErrorEvent(mErrorMessage);
 
                     if (ProcessingTimespan)
                         return true;
@@ -305,6 +311,7 @@ namespace LLRC
                 var wf = new WriteFiles();
                 wf.DeleteFiles(mWorkingDirPath);
                 var validDatasetIDs = wf.WriteCsv(metricsByDataset, mWorkingDirPath);
+                RegisterEvents(wf);
 
                 wf.WriteRFile(mWorkingDirPath);
                 wf.WriteBatch(mWorkingDirPath);
@@ -316,10 +323,9 @@ namespace LLRC
                     else
                         mErrorMessage = "All of the datasets were missing 1 or more required metrics; unable to run LLRC";
 
-                    if (mProcessingTimespan)
-                        return true;
+                    OnErrorEvent(mErrorMessage);
 
-                    return false;
+                    return ProcessingTimespan;
                 }
 
                 var success = RunLLRC(mWorkingDirPath, validDatasetIDs.Count);
@@ -477,7 +483,10 @@ namespace LLRC
                     p.Kill();
 
                 if (string.IsNullOrEmpty(mErrorMessage))
+                {
                     mErrorMessage = "Unknown error running R";
+                    OnErrorEvent(mErrorMessage);
+                }
 
                 return false;
             }
@@ -487,6 +496,7 @@ namespace LLRC
             if (!resultsFile.Exists)
             {
                 mErrorMessage = "R exited without error, but the results file does not exist: " + resultsFile.Name + " at " + resultsFile.FullName;
+                OnErrorEvent(mErrorMessage);
                 return false;
             }
 

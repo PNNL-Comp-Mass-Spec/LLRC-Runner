@@ -100,7 +100,7 @@ namespace LLRC
                 if (!row.TryGetValue(item, out var metricValue))
                 {
                     if (showWarning)
-                        Console.WriteLine("Warning: Dataset " + datasetID + " is missing metric " + Enum.GetName(typeof(DatabaseManager.MetricColumns), item));
+                        OnWarningEvent("Warning: Dataset " + datasetID + " is missing metric " + Enum.GetName(typeof(DatabaseManager.MetricColumns), item));
 
                     return true;
                 }
@@ -108,7 +108,7 @@ namespace LLRC
                 if (string.IsNullOrWhiteSpace(metricValue) || metricValue.Equals("NA", StringComparison.OrdinalIgnoreCase))
                 {
                     if (showWarning)
-                        Console.WriteLine("Warning: Dataset " + datasetID + " has a missing value for column " + Enum.GetName(typeof(DatabaseManager.MetricColumns), item));
+                        OnWarningEvent("Warning: Dataset " + datasetID + " has a missing value for column " + Enum.GetName(typeof(DatabaseManager.MetricColumns), item));
 
                     return true;
                 }
@@ -246,7 +246,7 @@ namespace LLRC
                     {
                         instrumentWarnCount++;
                         if (instrumentWarnCount <= 10)
-                            Console.WriteLine("Unsupported instrument group \"" + instrumentGroup + "\" for DatasetID " + datasetID);
+                            OnWarningEvent("Unsupported instrument group \"" + instrumentGroup + "\" for DatasetID " + datasetID);
                     }
                     else
                     {
@@ -261,12 +261,12 @@ namespace LLRC
 
             if (warnCount > 10)
             {
-                Console.WriteLine(" ... " + (warnCount - 10) + " additional missing value warnings not shown");
+                OnWarningEvent(" ... " + (warnCount - 10) + " additional missing value warnings not shown");
             }
 
             if (instrumentWarnCount > 10)
             {
-                Console.WriteLine(" ... " + (instrumentWarnCount - 10) + " additional instrument warnings not shown");
+                OnWarningEvent(" ... " + (instrumentWarnCount - 10) + " additional instrument warnings not shown");
             }
 
             return validDatasetIDs;

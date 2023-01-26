@@ -76,7 +76,7 @@ namespace LLRC
 
                         if (!results.TryGetValue(datasetID, out var llrcPrediction))
                         {
-                            Console.WriteLine("LLRC value not computed for DatasetID " + datasetID);
+                            OnWarningEvent("LLRC value not computed for DatasetID " + datasetID);
                             continue;
                         }
 
@@ -106,7 +106,7 @@ namespace LLRC
 
                 if (Errors.Count == 0)
                 {
-                    Console.WriteLine("  Successfully posted results");
+                    OnStatusEvent("  Successfully posted results");
                 }
             }
             catch (Exception ex)
@@ -129,7 +129,7 @@ namespace LLRC
 
             if (!File.Exists(resultsFilePath))
             {
-                Console.WriteLine("Results file not found: " + resultsFilePath);
+                OnErrorEvent("Results file not found: " + resultsFilePath);
                 return results;
             }
 
@@ -159,7 +159,7 @@ namespace LLRC
                         }
                         else
                         {
-                            Console.WriteLine("Error, last column of the header line in the results file does not start with LLRC: " + resultsFilePath);
+                            OnErrorEvent("Error, last column of the header line in the results file does not start with LLRC: " + resultsFilePath);
                             return results;
                         }
                     }
@@ -233,7 +233,7 @@ namespace LLRC
 
             try
             {
-                Console.WriteLine("Posting QCDM Results to the database for Dataset ID " + datasetId);
+                OnStatusEvent("Posting QCDM Results to the database for Dataset ID " + datasetId);
 
                 // We need to remove the encoding line from xmlResults before posting to the DB
                 // This line will look like this:
