@@ -7,20 +7,19 @@ using PRISM;
 
 namespace LLRC
 {
-    class Posting : EventNotifier
+    internal class Posting : EventNotifier
     {
         public const string STORED_PROCEDURE = "StoreQCDMResults";
 
-        protected string mConnectionString;
-        protected string mErrorMessage;
-        protected string mStoredProcedureError;
+        private readonly string mConnectionString;
 
-        protected List<int> mBadDatasetIDs;
-        protected List<string> mErrors;
+        private string mErrorMessage;
 
-        public List<int> BadDatasetIDs => mBadDatasetIDs;
+        private string mStoredProcedureError;
 
-        public List<string> Errors => mErrors;
+        public List<int> BadDatasetIDs { get; }
+
+        public List<string> Errors { get; }
 
         /// <summary>
         /// Constructor
@@ -30,8 +29,8 @@ namespace LLRC
             mConnectionString = connectionString;
             mErrorMessage = string.Empty;
 
-            mBadDatasetIDs = new List<int>();
-            mErrors = new List<string>();
+            BadDatasetIDs = new List<int>();
+            Errors = new List<string>();
         }
 
         /// <summary>
@@ -44,7 +43,7 @@ namespace LLRC
         /// <returns>True if success, false if an error</returns>
         public bool PostToDatabase(Dictionary<int, Dictionary<DatabaseManager.MetricColumns, string>> metricsByDataset, SortedSet<int> validDatasetIDs, string workingDirPath)
         {
-            mErrors.Clear();
+            Errors.Clear();
 
             try
             {
@@ -57,8 +56,8 @@ namespace LLRC
                 {
                     Console.WriteLine();
 
-                    mBadDatasetIDs.Clear();
-                    mErrors.Clear();
+                    BadDatasetIDs.Clear();
+                    Errors.Clear();
 
                     foreach (var metricsOneDataset in metricsByDataset)
                     {
@@ -90,22 +89,22 @@ namespace LLRC
                         if (success)
                             continue;
 
-                        mBadDatasetIDs.Add(datasetID);
+                        BadDatasetIDs.Add(datasetID);
 
                         if (string.IsNullOrEmpty(mStoredProcedureError))
-                            mErrors.Add(mErrorMessage);
+                            Errors.Add(mErrorMessage);
                         else
-                            mErrors.Add(mErrorMessage + "; " + mStoredProcedureError);
+                            Errors.Add(mErrorMessage + "; " + mStoredProcedureError);
                     }
                 }
                 catch (Exception ex)
                 {
                     OnErrorEvent(string.Format("Exception storing results for dataset ID {0}", currentDatasetID), ex);
 
-                    mErrors.Add("Exception posting to the database: " + ex.Message);
+                    Errors.Add("Exception posting to the database: " + ex.Message);
                 }
 
-                if (mErrors.Count == 0)
+                if (Errors.Count == 0)
                 {
                     Console.WriteLine("  Successfully posted results");
                 }
@@ -113,13 +112,10 @@ namespace LLRC
             catch (Exception ex)
             {
                 OnErrorEvent("Exception loading the QCDM results", ex);
-                mErrors.Add("Exception loading the results: " + ex.Message);
+                Errors.Add("Exception loading the results: " + ex.Message);
             }
 
-            if (mErrors.Count == 0)
-                return true;
-
-            return false;
+            return Errors.Count == 0;
         }
 
         /// <summary>
@@ -230,7 +226,7 @@ namespace LLRC
         /// <param name="connectionString"></param>
         /// <param name="storedProcedure"></param>
         /// <returns>True if successful, false if an error</returns>
-        protected bool PostQCDMResultsToDb(int datasetId, string xmlResults, string connectionString, string storedProcedure)
+        private bool PostQCDMResultsToDb(int datasetId, string xmlResults, string connectionString, string storedProcedure)
         {
             mErrorMessage = string.Empty;
             mStoredProcedureError = string.Empty;

@@ -15,45 +15,28 @@ namespace LLRC
         public const string RDATA_FILE_MODELS = "Models_paper.Rdata";
         public const string RDATA_FILE_ALLDATA = "allData_v4.Rdata";
 
-        protected string mConnectionString;
-        protected string mWorkingDirPath;
+        private readonly string mConnectionString;
 
-        protected int mMaxResultsToDisplay;         // Only used if mPostToDB is false
-        protected bool mPostToDB;
-        protected bool mProcessingTimespan;         // Set this to True if processing a set of DatasetIDs from a timespan; when this is true, the code will not report an error if none of the datasets has valid metrics
-        protected bool mSkipAlreadyProcessedDatasets;
-
-        protected string mErrorMessage;
+        private string mErrorMessage;
 
         public string ErrorMessage => mErrorMessage;
 
-        public int MaxResultsToDisplay
-        {
-            get => mMaxResultsToDisplay;
-            set => mMaxResultsToDisplay = value;
-        }
-        public bool PostToDB
-        {
-            get => mPostToDB;
-            set => mPostToDB = value;
-        }
-        public bool ProcessingTimespan
-        {
-            get => mProcessingTimespan;
-            set => mProcessingTimespan = value;
-        }
+        /// <summary>
+        /// Maximum number of results to display
+        /// </summary>
+        /// <remarks>Only used if mPostToDB is false</remarks>
+        public int MaxResultsToDisplay { get; set; }
 
-        public bool SkipAlreadyProcessedDatasets
-        {
-            get => mSkipAlreadyProcessedDatasets;
-            set => mSkipAlreadyProcessedDatasets = value;
-        }
+        public bool PostToDB { get; set; }
 
-        public string WorkingDirectory
-        {
-            get => mWorkingDirPath;
-            set => mWorkingDirPath = value;
-        }
+        /// <summary>
+        /// Set this to True if processing a set of DatasetIDs from a timespan; when this is true, the code will not report an error if none of the datasets has valid metrics
+        /// </summary>
+        public bool ProcessingTimespan { get; set; }
+
+        public bool SkipAlreadyProcessedDatasets { get; set; }
+
+        public string WorkingDirectory { get; set; }
 
         /// <summary>
         /// Constructor
@@ -67,12 +50,12 @@ namespace LLRC
 
             mConnectionString = DbToolsFactory.AddApplicationNameToConnectionString(connectionString, "LLRC");
 
-            mWorkingDirPath = PRISM.AppUtils.GetAppDirectoryPath();
+            WorkingDirectory = PRISM.AppUtils.GetAppDirectoryPath();
 
-            mMaxResultsToDisplay = 10;
-            mPostToDB = false;
+            MaxResultsToDisplay = 10;
+            PostToDB = false;
             ProcessingTimespan = false;
-            mSkipAlreadyProcessedDatasets = false;
+            SkipAlreadyProcessedDatasets = false;
         }
 
         /// <summary>
@@ -81,7 +64,7 @@ namespace LLRC
         /// <param name="hours"></param>
         /// <param name="connectionString"></param>
         /// <returns>List of Dataset IDs</returns>
-        protected List<int> FindRecentNewDatasets(int hours, string connectionString)
+        private List<int> FindRecentNewDatasets(int hours, string connectionString)
         {
             var datasetIDs = new List<int>();
 
@@ -129,7 +112,7 @@ namespace LLRC
         /// </summary>
         /// <param name="scriptOutFilePath"></param>
         /// <returns>True if an error, false if no errors</returns>
-        protected bool ErrorReportedByR(string scriptOutFilePath)
+        private bool ErrorReportedByR(string scriptOutFilePath)
         {
             if (!File.Exists(scriptOutFilePath))
                 return false;
@@ -290,9 +273,10 @@ namespace LLRC
 
                 foreach (var filename in requiredFiles)
                 {
-                    if (!File.Exists(Path.Combine(mWorkingDirPath, filename)))
+                    if (!File.Exists(Path.Combine(WorkingDirectory, filename)))
                     {
-                        mErrorMessage = "Required input file not found: " + filename + " at " + mWorkingDirPath;
+                        mErrorMessage = "Required input file not found: " + filename + " at " + WorkingDirectory;
+
                         return false;
                     }
                 }
@@ -302,14 +286,14 @@ namespace LLRC
                 var db = new DatabaseManager(mConnectionString);
                 RegisterEvents(db);
 
-                var metricsByDataset = db.GetData(datasetIDs, mSkipAlreadyProcessedDatasets);
+                var metricsByDataset = db.GetData(datasetIDs, SkipAlreadyProcessedDatasets);
 
                 // Checks to see if we have any datasets
                 if (metricsByDataset.Count == 0)
                 {
                     mErrorMessage = "No Metrics were found for the given Datasets IDs";
 
-                    if (mProcessingTimespan)
+                    if (ProcessingTimespan)
                         return true;
 
                     return false;
@@ -346,7 +330,7 @@ namespace LLRC
                     return false;
                 }
 
-                if (!mPostToDB)
+                if (!PostToDB)
                 {
                     // Display the results
                     var post = new Posting(mConnectionString);
@@ -363,7 +347,7 @@ namespace LLRC
                     {
                         OnStatusEvent("DatasetID " + item.Key + ": " + item.Value);
                         datasetCountDisplayed++;
-                        if (datasetCountDisplayed >= mMaxResultsToDisplay)
+                        if (datasetCountDisplayed >= MaxResultsToDisplay)
                         {
                             OnStatusEvent("Results for " + (qcdmResults.Count - datasetCountDisplayed) + " additional datasets not displayed");
                             break;
@@ -448,7 +432,7 @@ namespace LLRC
         /// <param name="WorkingDirPath"></param>
         /// <param name="datasetCount"></param>
         /// <returns>True if success, false if an error</returns>
-        protected bool RunLLRC(string WorkingDirPath, int datasetCount)
+        private bool RunLLRC(string WorkingDirPath, int datasetCount)
         {
             var appDirectoryPath = PRISM.AppUtils.GetAppDirectoryPath();
 

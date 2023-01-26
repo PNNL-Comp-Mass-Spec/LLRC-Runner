@@ -5,11 +5,11 @@ using System.Data;
 
 namespace LLRC
 {
-    class DatabaseManager : PRISM.EventNotifier
+    internal class DatabaseManager : PRISM.EventNotifier
     {
         private readonly IDBTools mDbTools;
 
-        protected string mErrorMessage;
+        private string mErrorMessage;
 
         public string ErrorMessage => mErrorMessage;
 
