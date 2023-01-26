@@ -16,13 +16,9 @@ namespace LLRC
         protected List<int> mBadDatasetIDs;
         protected List<string> mErrors;
 
-        #region "Properties"
-
         public List<int> BadDatasetIDs => mBadDatasetIDs;
 
         public List<string> Errors => mErrors;
-
-        #endregion
 
         /// <summary>
         /// Constructor

@@ -9,8 +9,6 @@ namespace LLRC
 {
     public class LLRCWrapper
     {
-        public const string PROGRAM_DATE = "September 21, 2018";
-
         public const string NO_NEW_RECENT_DATASETS = "No new datasets found with new QC values from the last";
 
         public const string RDATA_FILE_MODELS = "Models_paper.Rdata";
@@ -26,7 +24,6 @@ namespace LLRC
 
         protected string mErrorMessage;
 
-        #region "Properties"
         public string ErrorMessage => mErrorMessage;
 
         public int MaxResultsToDisplay
@@ -56,8 +53,6 @@ namespace LLRC
             get => mWorkingDirPath;
             set => mWorkingDirPath = value;
         }
-        #endregion
-
 
         /// <summary>
         /// Constructor

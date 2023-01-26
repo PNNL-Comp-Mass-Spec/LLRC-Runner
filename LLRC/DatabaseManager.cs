@@ -41,17 +41,8 @@ public const string DEFAULT_CONNECTION_STRING = "Data Source=gigasax;Initial Cat
             public const int MS2_4A = 87;
             public const int MS2_4B = 88;
         }
+        public string ErrorMessage => mErrorMessage;
 
-        #region "Properties"
-        public string ErrorMessge
-        {
-            get
-            {
-                return mErrorMessage;
-            }
-        }
-
-        #endregion
 
         /// <summary>
         /// </summary>
