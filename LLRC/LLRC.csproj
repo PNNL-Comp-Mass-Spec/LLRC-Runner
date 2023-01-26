@@ -41,8 +41,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="clsLLRC.cs" />
-    <Compile Include="DatabaseMang.cs" />
+    <Compile Include="DatabaseManager.cs" />
+    <Compile Include="LLRCWrapper.cs" />
     <Compile Include="Posting.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="WriteFiles.cs" />

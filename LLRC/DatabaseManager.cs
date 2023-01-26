@@ -4,7 +4,7 @@ using System.Data.SqlClient;
 
 namespace LLRC
 {
-    class DatabaseMang
+    class DatabaseManager : PRISM.EventNotifier
     {
 public const string DEFAULT_CONNECTION_STRING = "Data Source=gigasax;Initial Catalog=DMS5;Integrated Security=SSPI;";
 
@@ -54,16 +54,14 @@ public const string DEFAULT_CONNECTION_STRING = "Data Source=gigasax;Initial Cat
         #endregion
 
         /// <summary>
-        /// Constructor
         /// </summary>
-        public DatabaseMang() : this(DEFAULT_CONNECTION_STRING)
         {
         }
 
         /// <summary>
         /// Constructor
         /// </summary>
-        public DatabaseMang(string connectionString)
+        public DatabaseManager(string connectionString)
         {
             if (string.IsNullOrEmpty(connectionString))
                 connectionString = DEFAULT_CONNECTION_STRING;

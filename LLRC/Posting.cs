@@ -27,14 +27,6 @@ namespace LLRC
         /// <summary>
         /// Constructor
         /// </summary>
-        public Posting()
-            : this(DatabaseMang.DEFAULT_CONNECTION_STRING)
-        {
-        }
-
-        /// <summary>
-        /// Constructor
-        /// </summary>
         public Posting(string connectionString)
         {
             mConnectionString = connectionString;

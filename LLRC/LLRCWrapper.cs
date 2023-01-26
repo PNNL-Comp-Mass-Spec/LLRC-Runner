@@ -58,13 +58,6 @@ namespace LLRC
         }
         #endregion
 
-        /// <summary>
-        /// Constructor
-        /// </summary>
-        public LLRCWrapper()
-            : this(DatabaseMang.DEFAULT_CONNECTION_STRING)
-        {
-        }
 
         /// <summary>
         /// Constructor
@@ -347,8 +340,9 @@ namespace LLRC
                 }
 
                 // Open the database
-                // Get the data from the database about the dataset Ids
-                var db = new DatabaseMang();
+                // Get the data from the database about the dataset IDs
+                var db = new DatabaseManager(mConnectionString);
+                RegisterEvents(db);
 
                 var metricsByDataset = db.GetData(datasetIDs, mSkipAlreadyProcessedDatasets);
 
