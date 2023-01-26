@@ -122,8 +122,11 @@ namespace LLRC
             return false;
         }
 
-        //gets the QCDM value from the .csv file that is created from the R program
-        public Dictionary<int, string> CacheQCDMResults(string workingDirPath)
+        /// <summary>
+        /// Reads the QCDM value from the .csv file that is created from the R program
+        /// </summary>
+        /// <param name="workingDirPath"></param>
+        public Dictionary<int, string> LoadQCDMResults(string workingDirPath)
         {
             var resultsFilePath = Path.Combine(workingDirPath, "TestingDataset.csv");
             var results = new Dictionary<int, string>();

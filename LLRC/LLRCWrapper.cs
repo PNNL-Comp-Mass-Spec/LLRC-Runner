@@ -349,8 +349,10 @@ namespace LLRC
                 if (!mPostToDB)
                 {
                     // Display the results
-                    var post = new Posting();
-                    var qcdmResults = post.CacheQCDMResults(mWorkingDirPath);
+                    var post = new Posting(mConnectionString);
+                    RegisterEvents(post);
+
+                    var qcdmResults = post.LoadQCDMResults(mWorkingDirPath);
                     var datasetCountDisplayed = 0;
 
                     // Display results for the first 10 datasets
