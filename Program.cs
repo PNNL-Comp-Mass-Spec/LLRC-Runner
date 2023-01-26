@@ -162,10 +162,10 @@ namespace LLRCRunner
                     mSkipAlreadyProcessedDatasets = true;
                 }
 
-                if (commandLineParser.RetrieveValueForParameter("Display", out var maxResultsToDisplay))
+                if (commandLineParser.RetrieveValueForParameter("Display", out var maxResultsToDisplay) &&
+                    int.TryParse(maxResultsToDisplay, out var maxResults))
                 {
-                    if (int.TryParse(maxResultsToDisplay, out var maxResults))
-                        mMaxResultsToDisplay = maxResults;
+                    mMaxResultsToDisplay = maxResults;
                 }
 
                 return true;
