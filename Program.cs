@@ -115,11 +115,6 @@ namespace LLRCRunner
             return 0;
         }
 
-        private static string GetAppVersion()
-        {
-            return System.Reflection.Assembly.GetExecutingAssembly().GetName().Version + " (" + PROGRAM_DATE + ")";
-        }
-
         private static bool SetOptionsUsingCommandLineParameters(clsParseCommandLine commandLineParser)
         {
             // Returns True if no problems; otherwise, returns false
@@ -215,7 +210,7 @@ namespace LLRCRunner
 
                 Console.WriteLine();
                 Console.WriteLine("Program written by Joshua Davis and Matthew Monroe for the Department of Energy (PNNL, Richland, WA)");
-                Console.WriteLine("Version: " + GetAppVersion());
+                Console.WriteLine("Version: " + AppUtils.GetAppVersion(PROGRAM_DATE));
                 Console.WriteLine();
 
                 Console.WriteLine("E-mail: matthew.monroe@pnl.gov or proteomics@pnnl.gov");
@@ -223,7 +218,7 @@ namespace LLRCRunner
                 Console.WriteLine();
 
                 // Delay for 750 msec in case the user double clicked this file from within Windows Explorer (or started the program via a shortcut)
-                System.Threading.Thread.Sleep(750);
+                AppUtils.SleepMilliseconds(750);
             }
             catch (Exception ex)
             {

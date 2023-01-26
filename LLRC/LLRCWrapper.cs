@@ -379,9 +379,9 @@ namespace LLRC
 
                     while (retry > 0)
                     {
-                        // Wait 1 second to let R close
-                        System.Threading.Thread.Sleep(333);
-                        PRISM.ProgRunner.GarbageCollectNow();
+                        // Wait 300 milliseconds to let R close
+                        PRISM.AppUtils.SleepMilliseconds(333);
+                        PRISM.AppUtils.GarbageCollectNow();
 
                         var post = new Posting(mConnectionString);
                         success = post.PostToDatabase(metricsByDataset, validDatasetIDs, mWorkingDirPath);
@@ -450,15 +450,16 @@ namespace LLRC
         /// <returns>True if success, false if an error</returns>
         protected bool RunLLRC(string WorkingDirPath, int datasetCount)
         {
-            var appFolderPath = GetAppFolderPath();
+            var appDirectoryPath = PRISM.AppUtils.GetAppDirectoryPath();
 
             // Runs the batch program
-            var p = new System.Diagnostics.Process {
-                StartInfo = {FileName = Path.Combine(WorkingDirPath, "RunR.bat")}
+            var p = new System.Diagnostics.Process
+            {
+                StartInfo = { FileName = Path.Combine(WorkingDirPath, "RunR.bat") }
             };
             p.Start();
 
-            var scriptOutFilePath = Path.Combine(appFolderPath, "QCDMscript.r.Rout");
+            var scriptOutFilePath = Path.Combine(appDirectoryPath, "QCDMscript.r.Rout");
 
             // Note that this results file must be named TestingDataset.csv
             var resultsFile = new FileInfo(Path.Combine(WorkingDirPath, "TestingDataset.csv"));
@@ -472,7 +473,7 @@ namespace LLRC
             // Checks to see if the files have been made
             while (!p.HasExited && !resultsFile.Exists)
             {
-                System.Threading.Thread.Sleep(sleepTimeMsec);
+                PRISM.AppUtils.SleepMilliseconds(sleepTimeMsec);
 
                 if (ErrorReportedByR(scriptOutFilePath))
                 {
