@@ -186,7 +186,7 @@ namespace LLRC
                               " xic_height_q4, rt_duration, rt_tic_q1, rt_tic_q2, rt_tic_q3, rt_tic_q4, rt_ms_q1, rt_ms_q2, rt_ms_q3, rt_ms_q4," +
                               " rt_msms_q1, rt_msms_q2, rt_msms_q3, rt_msms_q4, ms1_tic_change_q3, ms1_tic_change_q4, ms1_tic_q3, ms1_tic_q4," +
                               " ms1_count, ms1_freq_max, ms1_density_q3, ms2_count, ms2_freq_max, ms2_density_q2, ms2_density_q3," +
-                              " ms2_prec_z_1, ms2_prec_z_1, ms2_prec_z_2, ms2_prec_z_3, ms2_prec_z_4, ms2_prec_z_5, ms2_prec_z_more, " +
+                              " ms2_prec_z_1, ms2_prec_z_2, ms2_prec_z_3, ms2_prec_z_4, ms2_prec_z_5, ms2_prec_z_more, " +
                               " ms2_prec_z_likely_1, ms2_prec_z_likely_multi, quameter_last_affected," +
                               " c_1a, c_1b, c_2a, c_2b, c_3a, c_3b, c_4a, c_4b, c_4c, ds_1a, ds_1b, ds_3a, ds_3b, is_1a, is_1b, is_2, is_3a," +
                               " is_3b, is_3c, ms1_1, ms1_2a, ms1_3a, ms1_3b, ms1_5a, ms1_5b, ms1_5c, ms1_5d, ms2_1, ms2_2, ms2_3, ms2_4a," +
