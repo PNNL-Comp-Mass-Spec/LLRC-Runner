@@ -12,6 +12,11 @@ namespace LLRC
         public const string LLR_SCRIPT_NAME = "QCDMscript.r";
 
         /// <summary>
+        /// Keys in this dictionary are metric names, values are the column index in the .csv file created by this class
+        /// </summary>
+        public Dictionary<DatabaseManager.MetricColumns, int> ColumnIndexMap { get; }
+
+        /// <summary>
         /// This property tracks any errors related to finding the directory with R.exe
         /// </summary>
         public string ErrorMessage { get; }
@@ -27,6 +32,106 @@ namespace LLRC
         {
             RProgramPath = GetRPathFromWindowsRegistry(out var errorMessage);
             ErrorMessage = errorMessage;
+
+            ColumnIndexMap = new Dictionary<DatabaseManager.MetricColumns, int>
+            {
+                { DatabaseManager.MetricColumns.Instrument_Group, 0 },
+                { DatabaseManager.MetricColumns.Dataset_ID, 1 },
+                { DatabaseManager.MetricColumns.Instrument, 2 },
+                { DatabaseManager.MetricColumns.Dataset, 3 },
+                { DatabaseManager.MetricColumns.XIC_Wide_Frac, 4 },
+                { DatabaseManager.MetricColumns.MS1_TIC_Change_Q2, 5 },
+                { DatabaseManager.MetricColumns.MS1_TIC_Q2, 6 },
+                { DatabaseManager.MetricColumns.MS1_Density_Q1, 7 },
+                { DatabaseManager.MetricColumns.MS1_Density_Q2, 8 },
+                { DatabaseManager.MetricColumns.MS2_Density_Q1, 9 },
+                { DatabaseManager.MetricColumns.DS_2A, 10 },
+                { DatabaseManager.MetricColumns.DS_2B, 11 },
+                { DatabaseManager.MetricColumns.MS1_2B, 12 },
+                { DatabaseManager.MetricColumns.P_2A, 13 },
+                { DatabaseManager.MetricColumns.P_2B, 14 },
+                { DatabaseManager.MetricColumns.P_2C, 15 },
+                { DatabaseManager.MetricColumns.SMAQC_Job, 16 },
+                { DatabaseManager.MetricColumns.Quameter_Job, 17 },
+                { DatabaseManager.MetricColumns.XIC_FWHM_Q1, 18 },
+                { DatabaseManager.MetricColumns.XIC_FWHM_Q2, 19 },
+                { DatabaseManager.MetricColumns.XIC_FWHM_Q3, 20 },
+                { DatabaseManager.MetricColumns.XIC_Height_Q2, 21 },
+                { DatabaseManager.MetricColumns.XIC_Height_Q3, 22 },
+                { DatabaseManager.MetricColumns.XIC_Height_Q4, 23 },
+                { DatabaseManager.MetricColumns.RT_Duration, 24 },
+                { DatabaseManager.MetricColumns.RT_TIC_Q1, 25 },
+                { DatabaseManager.MetricColumns.RT_TIC_Q2, 26 },
+                { DatabaseManager.MetricColumns.RT_TIC_Q3, 27 },
+                { DatabaseManager.MetricColumns.RT_TIC_Q4, 28 },
+                { DatabaseManager.MetricColumns.RT_MS_Q1, 29 },
+                { DatabaseManager.MetricColumns.RT_MS_Q2, 30 },
+                { DatabaseManager.MetricColumns.RT_MS_Q3, 31 },
+                { DatabaseManager.MetricColumns.RT_MS_Q4, 32 },
+                { DatabaseManager.MetricColumns.RT_MSMS_Q1, 33 },
+                { DatabaseManager.MetricColumns.RT_MSMS_Q2, 34 },
+                { DatabaseManager.MetricColumns.RT_MSMS_Q3, 35 },
+                { DatabaseManager.MetricColumns.RT_MSMS_Q4, 36 },
+                { DatabaseManager.MetricColumns.MS1_TIC_Change_Q3, 37 },
+                { DatabaseManager.MetricColumns.MS1_TIC_Change_Q4, 38 },
+                { DatabaseManager.MetricColumns.MS1_TIC_Q3, 39 },
+                { DatabaseManager.MetricColumns.MS1_TIC_Q4, 40 },
+                { DatabaseManager.MetricColumns.MS1_Count, 41 },
+                { DatabaseManager.MetricColumns.MS1_Freq_Max, 42 },
+                { DatabaseManager.MetricColumns.MS1_Density_Q3, 43 },
+                { DatabaseManager.MetricColumns.MS2_Count, 44 },
+                { DatabaseManager.MetricColumns.MS2_Freq_Max, 45 },
+                { DatabaseManager.MetricColumns.MS2_Density_Q2, 46 },
+                { DatabaseManager.MetricColumns.MS2_Density_Q3, 47 },
+                { DatabaseManager.MetricColumns.MS2_Prec_Z_1, 48 },
+                { DatabaseManager.MetricColumns.MS2_Prec_Z_2, 49 },
+                { DatabaseManager.MetricColumns.MS2_Prec_Z_3, 50 },
+                { DatabaseManager.MetricColumns.MS2_Prec_Z_4, 51 },
+                { DatabaseManager.MetricColumns.MS2_Prec_Z_5, 52 },
+                { DatabaseManager.MetricColumns.MS2_Prec_Z_more, 53 },
+                { DatabaseManager.MetricColumns.MS2_Prec_Z_likely_1, 54 },
+                { DatabaseManager.MetricColumns.MS2_Prec_Z_likely_multi, 55 },
+                { DatabaseManager.MetricColumns.Quameter_Last_Affected, 56 },
+                { DatabaseManager.MetricColumns.C_1A, 57 },
+                { DatabaseManager.MetricColumns.C_1B, 58 },
+                { DatabaseManager.MetricColumns.C_2A, 59 },
+                { DatabaseManager.MetricColumns.C_2B, 60 },
+                { DatabaseManager.MetricColumns.C_3A, 61 },
+                { DatabaseManager.MetricColumns.C_3B, 62 },
+                { DatabaseManager.MetricColumns.C_4A, 63 },
+                { DatabaseManager.MetricColumns.C_4B, 64 },
+                { DatabaseManager.MetricColumns.C_4C, 65 },
+                { DatabaseManager.MetricColumns.DS_1A, 66 },
+                { DatabaseManager.MetricColumns.DS_1B, 67 },
+                { DatabaseManager.MetricColumns.DS_3A, 68 },
+                { DatabaseManager.MetricColumns.DS_3B, 69 },
+                { DatabaseManager.MetricColumns.IS_1A, 70 },
+                { DatabaseManager.MetricColumns.IS_1B, 71 },
+                { DatabaseManager.MetricColumns.IS_2, 72 },
+                { DatabaseManager.MetricColumns.IS_3A, 73 },
+                { DatabaseManager.MetricColumns.IS_3B, 74 },
+                { DatabaseManager.MetricColumns.IS_3C, 75 },
+                { DatabaseManager.MetricColumns.MS1_1, 76 },
+                { DatabaseManager.MetricColumns.MS1_2A, 77 },
+                { DatabaseManager.MetricColumns.MS1_3A, 78 },
+                { DatabaseManager.MetricColumns.MS1_3B, 79 },
+                { DatabaseManager.MetricColumns.MS1_5A, 80 },
+                { DatabaseManager.MetricColumns.MS1_5B, 81 },
+                { DatabaseManager.MetricColumns.MS1_5C, 82 },
+                { DatabaseManager.MetricColumns.MS1_5D, 83 },
+                { DatabaseManager.MetricColumns.MS2_1, 84 },
+                { DatabaseManager.MetricColumns.MS2_2, 85 },
+                { DatabaseManager.MetricColumns.MS2_3, 86 },
+                { DatabaseManager.MetricColumns.MS2_4A, 87 },
+                { DatabaseManager.MetricColumns.MS2_4B, 88 },
+                { DatabaseManager.MetricColumns.MS2_4C, 89 },
+                { DatabaseManager.MetricColumns.MS2_4D, 90 },
+                { DatabaseManager.MetricColumns.P_1A, 91 },
+                { DatabaseManager.MetricColumns.P_1B, 92 },
+                { DatabaseManager.MetricColumns.P_3, 93 },
+                { DatabaseManager.MetricColumns.Smaqc_Last_Affected, 94 },
+                { DatabaseManager.MetricColumns.PSM_Source_Job, 95 }
+            };
         }
 
         /// <summary>
@@ -55,9 +160,24 @@ namespace LLRC
             if (sortedKeys[0] != DatabaseManager.MetricColumns.Instrument_Group)
                 throw new Exception("The first metric is not Instrument_Group; cannot write to the .csv file");
 
+            // Column order should match the HEADER_LINE constant:
+            // Instrument_Category, Dataset_ID, Instrument, Dataset, XIC_WideFrac, etc.
+
+            var columnIndex = 1;
+
             foreach (var item in sortedKeys.Skip(1))
             {
+                var expectedIndex = ColumnIndexMap[item];
+
+                if (columnIndex != expectedIndex)
+                {
+                    throw new Exception(string.Format(
+                        "Column order in the LINQ query does not match the expected order: metric {0} should be at column index {1} but is instead at {2}",
+                        Enum.GetName(typeof(DatabaseManager.MetricColumns), item), expectedIndex, columnIndex));
+                }
+
                 sb.AppendFormat("{0},", metricsOneDataset[item]);
+                columnIndex++;
             }
 
             // Append the current year
