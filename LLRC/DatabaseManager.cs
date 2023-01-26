@@ -12,41 +12,48 @@ public const string DEFAULT_CONNECTION_STRING = "Data Source=gigasax;Initial Cat
 
         protected string mErrorMessage;
 
-        // These column indices are dependent on the query in DatabaseMang.GetData
-        public class MetricColumnIndex
-        {
-            public const int InstrumentGroup = 0;
-            public const int DatasetID = 1;
-            public const int Instrument = 2;
-            public const int DatasetName = 3;
-            public const int XIC_WideFrac = 4;
-            public const int MS1_TIC_Change_Q2 = 5;
-            public const int MS1_TIC_Q2 = 6;
-            public const int MS1_Density_Q1 = 7;
-            public const int MS1_Density_Q2 = 8;
-            public const int MS2_Density_Q1 = 9;
-            public const int DS_2A = 10;
-            public const int DS_2B = 11;
-            public const int MS1_2B = 12;
-            public const int P_2A = 13;
-            public const int P_2B = 14;
-            public const int P_2C = 15;
-            public const int SMAQC_Job = 16;
-            public const int Quameter_Job= 17;
-            public const int XIC_Height_Q4 = 23;
-            public const int DS_1A = 66;
-            public const int IS_1A = 70;
-            public const int IS_3A = 73;
-            public const int MS2_1 = 84;
-            public const int MS2_4A = 87;
-            public const int MS2_4B = 88;
-        }
         public string ErrorMessage => mErrorMessage;
 
+        public const int DATASET_ID_COLUMN_INDEX = 1;
 
         /// <summary>
+        /// This enum is used for the keys in the dictionary of metrics obtained for each dataset
         /// </summary>
+        /// <remarks>
+        /// <para>The names correspond to the column names in view V_Dataset_QC_Metrics_Export</para>
+        /// <para>Metric values are written to the .csv file by increasing enum value</para>
+        /// <para>
+        /// The R processing code assumes the column order defined here.
+        /// If the order is changed, or if any enum values are added or removed, the R code must be updated.
+        /// </para>
+        /// </remarks>
+        public enum MetricColumns
         {
+            Instrument_Group = 0,
+            Dataset_ID = 1,
+            Instrument = 2,
+            Dataset = 3,
+            XIC_Wide_Frac = 4,
+            MS1_TIC_Change_Q2 = 5,
+            MS1_TIC_Q2 = 6,
+            MS1_Density_Q1 = 7,
+            MS1_Density_Q2 = 8,
+            MS2_Density_Q1 = 9,
+            DS_2A = 10,
+            DS_2B = 11,
+            MS1_2B = 12,
+            P_2A = 13,
+            P_2B = 14,
+            P_2C = 15,
+            SMAQC_Job = 16,
+            Quameter_Job = 17,
+            XIC_Height_Q4 = 18,
+            DS_1A = 19,
+            IS_1A = 20,
+            IS_3A = 21,
+            MS2_1 = 22,
+            MS2_4A = 23,
+            MS2_4B = 24
         }
 
         /// <summary>
@@ -107,13 +114,13 @@ public const string DEFAULT_CONNECTION_STRING = "Data Source=gigasax;Initial Cat
         /// </summary>
         /// <param name="datasetIDs"></param>
         /// <param name="skipAlreadyProcessedDatasets">Set to True to skip DatasetIDs that already have a QCDM value</param>
-        /// <returns>QC data, as List of List of strings</returns>
-        public List<List<string>> GetData(List<int> datasetIDs, bool skipAlreadyProcessedDatasets)
+        /// <returns>QC data dictionary, where keys are dataset IDs and values are a dictionary of metrics for the given dataset</returns>
+        public Dictionary<int, Dictionary<MetricColumns, string>> GetData(List<int> datasetIDs, bool skipAlreadyProcessedDatasets)
         {
             const int CHUNK_SIZE = 500;
 
             var datasetIDsWithMetrics = new SortedSet<int>();
-            var metricsByDataset = new List<List<string>>();
+            var metricsByDataset = new Dictionary<int, Dictionary<MetricColumns, string>>();
             var datasets = new System.Text.StringBuilder();
 
             // Open the database connection
@@ -194,7 +201,7 @@ public const string DEFAULT_CONNECTION_STRING = "Data Source=gigasax;Initial Cat
                 {
                     OnErrorEvent("Error obtaining QC Metric value", ex);
                     mErrorMessage = "Error obtaining QC Metric values: " + ex.Message;
-                    return new List<List<string>>();
+                    return new Dictionary<int, Dictionary<MetricColumns, string>>();
                 }
 
                 if (DateTime.UtcNow.Subtract(startTime).TotalSeconds >= 1 && i + CHUNK_SIZE < datasetIDs.Count)

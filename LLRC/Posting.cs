@@ -35,12 +35,12 @@ namespace LLRC
         /// <summary>
         /// Posts the QCDM metric to the database
         /// </summary>
-        /// <param name="metricsByDataset"></param>
+        /// <param name="metricsByDataset">Dictionary where keys are Dataset IDs and values are the metric values</param>
         /// <param name="validDatasetIDs"></param>
         /// <param name="workingDirPath"></param>
-        /// <returns>True if success, false if an error</returns>
         /// <remarks>Use the Errors property of this class to view any errors</remarks>
-        public bool PostToDatabase(List<List<string>> metricsByDataset, SortedSet<int> validDatasetIDs, string workingDirPath)
+        /// <returns>True if success, false if an error</returns>
+        public bool PostToDatabase(Dictionary<int, Dictionary<DatabaseManager.MetricColumns, string>> metricsByDataset, SortedSet<int> validDatasetIDs, string workingDirPath)
         {
             mErrors.Clear();
 
@@ -58,16 +58,18 @@ namespace LLRC
 
                     foreach (var metricsOneDataset in metricsByDataset)
                     {
-                        var datasetID = LLRCWrapper.GetDatasetIdForMetricRow(metricsOneDataset);
+                        var datasetID = metricsOneDataset.Key;
+
+                        currentDatasetID = datasetID;
 
                         if (!validDatasetIDs.Contains(datasetID))
                         {
                             continue;
                         }
 
-                        var smaqcJob = metricsOneDataset[DatabaseMang.MetricColumnIndex.SMAQC_Job];
-                        var quameterJob = metricsOneDataset[DatabaseMang.MetricColumnIndex.Quameter_Job];
-                        var datasetName = metricsOneDataset[DatabaseMang.MetricColumnIndex.DatasetName];
+                        var smaqcJob = metricsOneDataset.Value[DatabaseManager.MetricColumns.SMAQC_Job];
+                        var quameterJob = metricsOneDataset.Value[DatabaseManager.MetricColumns.Quameter_Job];
+                        var datasetName = metricsOneDataset.Value[DatabaseManager.MetricColumns.Dataset];
 
                         if (!results.TryGetValue(datasetID, out var llrcPrediction))
                         {

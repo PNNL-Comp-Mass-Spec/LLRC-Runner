@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Net;
+using System.Linq;
 using System.Text;
 using Microsoft.Win32;
 
@@ -25,27 +25,32 @@ namespace LLRC
         /// <summary>
         /// Appends the metrics for the given dataset to the string builder
         /// </summary>
+        /// <param name="datasetID"></param>
         /// <param name="instrumentGroup"></param>
         /// <param name="metricsOneDataset"></param>
         /// <param name="requiredValues"></param>
         /// <param name="showWarning"></param>
         /// <param name="sb"></param>
-        protected bool AppendToCsv(string instrumentGroup, List<string> metricsOneDataset, Dictionary<int, string> requiredValues, bool showWarning, ref StringBuilder sb)
         /// <returns>True if the metrics are valid, otherwise false</returns>
+        protected bool AppendToCsv(int datasetID, string instrumentGroup, Dictionary<DatabaseManager.MetricColumns, string> metricsOneDataset, SortedSet<DatabaseManager.MetricColumns> requiredValues, bool showWarning, StringBuilder sb)
         {
-            var datasetID = LLRCWrapper.GetDatasetIdForMetricRow(metricsOneDataset);
-
             if (RowIsMissingValues(datasetID, metricsOneDataset, requiredValues, showWarning))
             {
                 return false;
             }
 
-            sb.Append(instrumentGroup + ",");
+            sb.AppendFormat("{0},", instrumentGroup);
 
-            // Append the remaining values
-            for (var j = 1; j < metricsOneDataset.Count; j++)
+            // Append the metrics, skipping the first metric (instrument group)
+
+            var sortedKeys = (from item in metricsOneDataset.Keys orderby (int)item select item).ToList();
+
+            if (sortedKeys[0] != DatabaseManager.MetricColumns.Instrument_Group)
+                throw new Exception("The first metric is not Instrument_Group; cannot write to the .csv file");
+
+            foreach (var item in sortedKeys.Skip(1))
             {
-                sb.Append(metricsOneDataset[j] + ",");
+                sb.AppendFormat("{0},", metricsOneDataset[item]);
             }
 
             // Append the current year
@@ -90,14 +95,22 @@ namespace LLRC
         /// <param name="requiredValues"></param>
         /// <param name="showWarning"></param>
         /// <returns>True if one or more columns is missing a value, false if no problems</returns>
-        protected bool RowIsMissingValues(int datasetID, List<string> row, Dictionary<int, string> requiredValues, bool showWarning)
+        protected bool RowIsMissingValues(int datasetID, Dictionary<DatabaseManager.MetricColumns, string> row, SortedSet<DatabaseManager.MetricColumns> requiredValues, bool showWarning)
         {
             foreach (var item in requiredValues)
             {
-                if (string.IsNullOrWhiteSpace(row[item.Key]) || row[item.Key] == "NA")
+                if (!row.TryGetValue(item, out var metricValue))
                 {
                     if (showWarning)
-                        Console.WriteLine("Warning: Dataset " + datasetID + " has a missing value for column " + item.Value);
+                        Console.WriteLine("Warning: Dataset " + datasetID + " is missing metric " + Enum.GetName(typeof(DatabaseManager.MetricColumns), item));
+
+                    return true;
+                }
+
+                if (string.IsNullOrWhiteSpace(metricValue) || metricValue.Equals("NA", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (showWarning)
+                        Console.WriteLine("Warning: Dataset " + datasetID + " has a missing value for column " + Enum.GetName(typeof(DatabaseManager.MetricColumns), item));
 
                     return true;
                 }
@@ -141,7 +154,7 @@ namespace LLRC
         /// <param name="metricsByDataset"></param>
         /// <param name="workingDirPath"></param>
         /// <returns>The list of valid dataset IDs</returns>
-        public SortedSet<int> WriteCsv(List<List<string>> metricsByDataset, string workingDirPath)
+        public SortedSet<int> WriteCsv(Dictionary<int, Dictionary<DatabaseManager.MetricColumns, string>> metricsByDataset, string workingDirPath)
         {
             var sb = new StringBuilder();
             sb.AppendLine(HEADER_LINE);
@@ -156,8 +169,8 @@ namespace LLRC
                 // Checks the instrument Category and checks to make sure the appropriate columns are present to calculate the results
                 // If a column is missing the dataset will be skipped
 
-                var instrumentGroup = metricsOneDataset[DatabaseMang.MetricColumnIndex.InstrumentGroup];
-                var datasetID = LLRCWrapper.GetDatasetIdForMetricRow(metricsOneDataset);
+                var instrumentGroup = metricsOneDataset.Value[DatabaseManager.MetricColumns.Instrument_Group];
+                var datasetID = metricsOneDataset.Key;
                 var validInstrumentGroup = false;
 
                 if (datasetID <= 0)
@@ -165,57 +178,64 @@ namespace LLRC
                     continue;
                 }
 
-                var requiredValues = new Dictionary<int, string>();
+                var requiredValues = new SortedSet<DatabaseManager.MetricColumns>();
 
                 var validMetrics = false;
 
-                if (instrumentGroup.Equals("LTQ") || instrumentGroup.Equals("LTQ-ETD") || instrumentGroup.Equals("LTQ-Prep") || instrumentGroup.Equals("VelosPro"))
+                if (instrumentGroup.Equals("LTQ", StringComparison.OrdinalIgnoreCase) ||
+                    instrumentGroup.Equals("LTQ-ETD", StringComparison.OrdinalIgnoreCase) ||
+                    instrumentGroup.Equals("LTQ-Prep", StringComparison.OrdinalIgnoreCase) ||
+                    instrumentGroup.Equals("VelosPro", StringComparison.OrdinalIgnoreCase))
                 {
                     validInstrumentGroup = true;
-                    requiredValues.Add(DatabaseMang.MetricColumnIndex.XIC_WideFrac, "XIC_WideFrac");
-                    requiredValues.Add(DatabaseMang.MetricColumnIndex.MS2_Density_Q1, "MS2_4B");
-                    requiredValues.Add(DatabaseMang.MetricColumnIndex.P_2C, "P_2C");
+                    requiredValues.Add(DatabaseManager.MetricColumns.XIC_Wide_Frac);
+                    requiredValues.Add(DatabaseManager.MetricColumns.MS2_Density_Q1);
+                    requiredValues.Add(DatabaseManager.MetricColumns.P_2C);
 
-                    validMetrics = AppendToCsv("LTQ_IonTrap", metricsOneDataset, requiredValues, showWarning, ref sb);
+                    validMetrics = AppendToCsv(datasetID, "LTQ_IonTrap", metricsOneDataset.Value, requiredValues, showWarning, sb);
                 }
 
-                if (instrumentGroup.Equals("Exactive"))
+                if (instrumentGroup.Equals("Exactive", StringComparison.OrdinalIgnoreCase))
                 {
                     validInstrumentGroup = true;
-                    requiredValues.Add(DatabaseMang.MetricColumnIndex.MS1_TIC_Q2, "MS1_TIC_Q2");
-                    requiredValues.Add(DatabaseMang.MetricColumnIndex.MS1_Density_Q1, "MS1_Density_Q1");
+                    requiredValues.Add(DatabaseManager.MetricColumns.MS1_TIC_Q2);
+                    requiredValues.Add(DatabaseManager.MetricColumns.MS1_Density_Q1);
 
-                    validMetrics = AppendToCsv("Exactive", metricsOneDataset, requiredValues, showWarning, ref sb);
+                    validMetrics = AppendToCsv(datasetID, "Exactive", metricsOneDataset.Value, requiredValues, showWarning, sb);
                 }
 
-                if (instrumentGroup.Equals("LTQ-FT") || instrumentGroup.Equals("Orbitrap"))
+                if (instrumentGroup.Equals("LTQ-FT", StringComparison.OrdinalIgnoreCase) ||
+                    instrumentGroup.Equals("Orbitrap", StringComparison.OrdinalIgnoreCase))
                 {
                     validInstrumentGroup = true;
-                    requiredValues.Add(DatabaseMang.MetricColumnIndex.XIC_WideFrac, "XIC_WideFrac");
-                    requiredValues.Add(DatabaseMang.MetricColumnIndex.XIC_Height_Q4, "XIC_Height_Q4");
-                    requiredValues.Add(DatabaseMang.MetricColumnIndex.MS1_TIC_Change_Q2, "MS1_TIC_Change_Q2");
-                    requiredValues.Add(DatabaseMang.MetricColumnIndex.MS1_Density_Q2, "MS1_Density_Q2");
-                    requiredValues.Add(DatabaseMang.MetricColumnIndex.DS_1A, "DS_1A");
-                    requiredValues.Add(DatabaseMang.MetricColumnIndex.DS_2A, "DS_2A");
-                    requiredValues.Add(DatabaseMang.MetricColumnIndex.IS_1A, "IS_1A");
-                    requiredValues.Add(DatabaseMang.MetricColumnIndex.IS_3A, "IS_3A");
-                    requiredValues.Add(DatabaseMang.MetricColumnIndex.MS2_1, "MS2_1");
-                    requiredValues.Add(DatabaseMang.MetricColumnIndex.MS2_4A, "MS2_4A");
-                    requiredValues.Add(DatabaseMang.MetricColumnIndex.MS2_4B, "MS2_4B");
-                    requiredValues.Add(DatabaseMang.MetricColumnIndex.P_2B, "P_2B");
+                    requiredValues.Add(DatabaseManager.MetricColumns.XIC_Wide_Frac);
+                    requiredValues.Add(DatabaseManager.MetricColumns.XIC_Height_Q4);
+                    requiredValues.Add(DatabaseManager.MetricColumns.MS1_TIC_Change_Q2);
+                    requiredValues.Add(DatabaseManager.MetricColumns.MS1_Density_Q2);
+                    requiredValues.Add(DatabaseManager.MetricColumns.DS_1A);
+                    requiredValues.Add(DatabaseManager.MetricColumns.DS_2A);
+                    requiredValues.Add(DatabaseManager.MetricColumns.IS_1A);
+                    requiredValues.Add(DatabaseManager.MetricColumns.IS_3A);
+                    requiredValues.Add(DatabaseManager.MetricColumns.MS2_1);
+                    requiredValues.Add(DatabaseManager.MetricColumns.MS2_4A);
+                    requiredValues.Add(DatabaseManager.MetricColumns.MS2_4B);
+                    requiredValues.Add(DatabaseManager.MetricColumns.P_2B);
 
-                    validMetrics = AppendToCsv("Orbitrap", metricsOneDataset, requiredValues, showWarning, ref sb);
+                    validMetrics = AppendToCsv(datasetID, "Orbitrap", metricsOneDataset.Value, requiredValues, showWarning, sb);
                 }
 
-                if (instrumentGroup.Equals("VelosOrbi") || instrumentGroup.Equals("QExactive") || instrumentGroup.Equals("Lumos") || instrumentGroup.Equals("QEHFX"))
+                if (instrumentGroup.Equals("VelosOrbi", StringComparison.OrdinalIgnoreCase) ||
+                    instrumentGroup.Equals("QExactive", StringComparison.OrdinalIgnoreCase) ||
+                    instrumentGroup.Equals("Lumos", StringComparison.OrdinalIgnoreCase) ||
+                    instrumentGroup.Equals("QEHFX", StringComparison.OrdinalIgnoreCase))
                 {
                     validInstrumentGroup = true;
-                    requiredValues.Add(DatabaseMang.MetricColumnIndex.XIC_WideFrac, "XIC_WideFrac");
-                    requiredValues.Add(DatabaseMang.MetricColumnIndex.MS2_4A, "MS2_4A");
-                    requiredValues.Add(DatabaseMang.MetricColumnIndex.MS2_4B, "MS2_4B");
-                    requiredValues.Add(DatabaseMang.MetricColumnIndex.P_2B, "P_2B");
+                    requiredValues.Add(DatabaseManager.MetricColumns.XIC_Wide_Frac);
+                    requiredValues.Add(DatabaseManager.MetricColumns.MS2_4A);
+                    requiredValues.Add(DatabaseManager.MetricColumns.MS2_4B);
+                    requiredValues.Add(DatabaseManager.MetricColumns.P_2B);
 
-                    validMetrics = AppendToCsv("VOrbitrap", metricsOneDataset, requiredValues, showWarning, ref sb);
+                    validMetrics = AppendToCsv(datasetID, "VOrbitrap", metricsOneDataset.Value, requiredValues, showWarning, sb);
                 }
 
                 if (validMetrics)
