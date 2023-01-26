@@ -276,7 +276,7 @@ namespace LLRC
         }
 
         /// <summary>
-        /// Writes the data from the database into a .csv file to be used in the R program
+        /// Writes the QC metrics to a .csv file to be used in the R program
         /// </summary>
         /// <param name="metricsByDataset"></param>
         /// <param name="workingDirPath"></param>
@@ -294,7 +294,7 @@ namespace LLRC
             foreach (var metricsOneDataset in metricsByDataset)
             {
                 // Checks the instrument Category and checks to make sure the appropriate columns are present to calculate the results
-                // If a column is missing the dataset will be skipped
+                // If a column is missing, the dataset will be skipped
 
                 var instrumentGroup = metricsOneDataset.Value[DatabaseManager.MetricColumns.Instrument_Group];
                 var datasetID = metricsOneDataset.Key;
