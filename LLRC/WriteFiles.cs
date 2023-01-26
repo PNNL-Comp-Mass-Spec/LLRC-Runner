@@ -278,21 +278,29 @@ namespace LLRC
             var regRCore = Registry.LocalMachine.OpenSubKey(R_CORE_KEY_NAME);
             if (regRCore == null)
             {
-                throw new ApplicationException("Registry key is not found: " + R_CORE_KEY_NAME);
+                throw new ApplicationException(string.Format("Registry key is not found: HKEY_LOCAL_MACHINE\\{0}", R_CORE_KEY_NAME));
             }
             var is64Bit = Environment.Is64BitProcess;
             var sRSubKey = is64Bit ? "R64" : "R";
             var regR = regRCore.OpenSubKey(sRSubKey);
+
+            var subKeyDescription = string.Format("HKEY_LOCAL_MACHINE\\{0}\\{1}", R_CORE_KEY_NAME, sRSubKey);
+
             if (regR == null)
             {
-                throw new ApplicationException("Registry key is not found: " + R_CORE_KEY_NAME + @"\" + sRSubKey);
+                throw new ApplicationException("Registry key is not found: " + subKeyDescription);
             }
 
             var installPath = (string)regR.GetValue("InstallPath");
-            var bin = Path.Combine(installPath, "bin");
-            bin = Path.Combine(bin, "R.exe");
 
-            return bin;
+            if (string.IsNullOrWhiteSpace(installPath))
+            {
+                throw new ApplicationException(string.Format("InstallPath is null in the Windows Registry under key {0}", subKeyDescription));
+            }
+
+            var bin = Path.Combine(installPath, "bin");
+
+            return Path.Combine(bin, "R.exe");
         }
     }
 }
