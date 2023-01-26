@@ -336,7 +336,9 @@ namespace LLRC
                     return ProcessingTimespan;
                 }
 
-                var success = RunLLRC(mWorkingDirPath, validDatasetIDs.Count);
+                var datasetIdColumnIndex = wf.ColumnIndexMap[DatabaseManager.MetricColumns.Dataset_ID];
+
+                var success = RunLLRC(WorkingDirectory, validDatasetIDs.Count);
 
                 if (!success)
                 {
@@ -350,7 +352,7 @@ namespace LLRC
                     var post = new Posting(mConnectionString);
                     RegisterEvents(post);
 
-                    var qcdmResults = post.LoadQCDMResults(mWorkingDirPath);
+                    var qcdmResults = post.LoadQCDMResults(WorkingDirectory, datasetIdColumnIndex);
                     var datasetCountDisplayed = 0;
 
                     // Display results for the first 10 datasets
@@ -382,7 +384,7 @@ namespace LLRC
                         PRISM.AppUtils.GarbageCollectNow();
 
                         var post = new Posting(mConnectionString);
-                        success = post.PostToDatabase(metricsByDataset, validDatasetIDs, mWorkingDirPath);
+                        success = post.PostToDatabase(metricsByDataset, validDatasetIDs, WorkingDirectory, datasetIdColumnIndex);
 
                         if (success)
                         {

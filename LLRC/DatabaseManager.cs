@@ -13,7 +13,6 @@ namespace LLRC
 
         public string ErrorMessage => mErrorMessage;
 
-        public const int DATASET_ID_COLUMN_INDEX = 1;
         // ReSharper disable InconsistentNaming
 
         /// <summary>

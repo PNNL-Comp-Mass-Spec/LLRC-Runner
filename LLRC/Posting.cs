@@ -39,16 +39,21 @@ namespace LLRC
         /// <param name="metricsByDataset">Dictionary where keys are Dataset IDs and values are the metric values</param>
         /// <param name="validDatasetIDs"></param>
         /// <param name="workingDirPath"></param>
+        /// <param name="datasetIdColumnIndex">Column index in the results file (TestingDataset.csv) of the Dataset_ID column</param>
         /// <remarks>Use the Errors property of this class to view any errors</remarks>
         /// <returns>True if success, false if an error</returns>
-        public bool PostToDatabase(Dictionary<int, Dictionary<DatabaseManager.MetricColumns, string>> metricsByDataset, SortedSet<int> validDatasetIDs, string workingDirPath)
+        public bool PostToDatabase(
+            Dictionary<int, Dictionary<DatabaseManager.MetricColumns, string>> metricsByDataset,
+            SortedSet<int> validDatasetIDs,
+            string workingDirPath,
+            int datasetIdColumnIndex)
         {
             Errors.Clear();
 
             try
             {
                 // Read the QCDMResults
-                var results = LoadQCDMResults(workingDirPath);
+                var results = LoadQCDMResults(workingDirPath, datasetIdColumnIndex);
 
                 var currentDatasetID = 0;
 
@@ -122,7 +127,8 @@ namespace LLRC
         /// Reads the QCDM value from the .csv file that is created from the R program
         /// </summary>
         /// <param name="workingDirPath"></param>
-        public Dictionary<int, string> LoadQCDMResults(string workingDirPath)
+        /// <param name="datasetIdColumnIndex"></param>
+        public Dictionary<int, string> LoadQCDMResults(string workingDirPath, int datasetIdColumnIndex)
         {
             var resultsFilePath = Path.Combine(workingDirPath, "TestingDataset.csv");
             var results = new Dictionary<int, string>();
@@ -163,7 +169,7 @@ namespace LLRC
                             return results;
                         }
                     }
-                    else if (int.TryParse(resultValues[DatabaseManager.DATASET_ID_COLUMN_INDEX], out var datasetID))
+                    else if (int.TryParse(resultValues[datasetIdColumnIndex], out var datasetID))
                     {
                         if (double.TryParse(resultValues[colIndexLLRC], out _))
                         {
