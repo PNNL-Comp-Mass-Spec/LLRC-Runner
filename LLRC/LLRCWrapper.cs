@@ -131,28 +131,28 @@ namespace LLRC
         /// <returns>True if an error, false if no errors</returns>
         protected bool ErrorReportedByR(string scriptOutFilePath)
         {
-            if (File.Exists(scriptOutFilePath))
+            if (!File.Exists(scriptOutFilePath))
+                return false;
+
+            using (var reader = new StreamReader(new FileStream(scriptOutFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)))
             {
-                using (var reader = new StreamReader(new FileStream(scriptOutFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)))
+                while (!reader.EndOfStream)
                 {
-                    while (!reader.EndOfStream)
+                    var logText = reader.ReadLine();
+
+                    if (string.IsNullOrEmpty(logText))
+                        continue;
+
+                    if (logText.Contains("there is no package called 'QCDM'") || logText.Contains("Execution halted"))
                     {
-                        var logText = reader.ReadLine();
+                        mErrorMessage = "Error with R: " + logText;
+                        return true;
+                    }
 
-                        if (string.IsNullOrEmpty(logText))
-                            continue;
-
-                        if (logText.Contains("there is no package called 'QCDM'") || logText.Contains("Execution halted"))
-                        {
-                            mErrorMessage = "Error with R: " + logText;
-                            return true;
-                        }
-
-                        if (logText.StartsWith("Error in "))
-                        {
-                            mErrorMessage = "Error with R: " + logText;
-                            return true;
-                        }
+                    if (logText.StartsWith("Error in "))
+                    {
+                        mErrorMessage = "Error with R: " + logText;
+                        return true;
                     }
                 }
             }
@@ -410,18 +410,19 @@ namespace LLRC
                             }
                         }
 
-                        if (post.BadDatasetIDs.Count > 0)
-                        {
-                            var badDatasetIDs = new StringBuilder();
-                            foreach (var datasetID in post.BadDatasetIDs)
-                            {
-                                if (badDatasetIDs.Length > 0)
-                                    badDatasetIDs.Append(", ");
-                                badDatasetIDs.Append(datasetID);
-                            }
+                        if (post.BadDatasetIDs.Count == 0)
+                            continue;
 
-                            Console.WriteLine("Dataset IDs for which LLRC could not compute a QCDM result: " + badDatasetIDs);
+                        var badDatasetIDs = new StringBuilder();
+
+                        foreach (var datasetID in post.BadDatasetIDs)
+                        {
+                            if (badDatasetIDs.Length > 0)
+                                badDatasetIDs.Append(", ");
+                            badDatasetIDs.Append(datasetID);
                         }
+
+                        OnWarningEvent("Dataset IDs for which LLRC could not compute a QCDM result: " + badDatasetIDs);
                     }
 
                     if (!success)
