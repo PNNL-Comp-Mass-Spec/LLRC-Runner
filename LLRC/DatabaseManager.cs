@@ -1,14 +1,13 @@
+using PRISMDatabaseUtils;
 using System;
 using System.Collections.Generic;
-using System.Data.SqlClient;
+using System.Data;
 
 namespace LLRC
 {
     class DatabaseManager : PRISM.EventNotifier
     {
-public const string DEFAULT_CONNECTION_STRING = "Data Source=gigasax;Initial Catalog=DMS5;Integrated Security=SSPI;";
-
-        private readonly SqlConnection mConnection;
+        private readonly IDBTools mDbTools;
 
         protected string mErrorMessage;
 
@@ -62,53 +61,14 @@ public const string DEFAULT_CONNECTION_STRING = "Data Source=gigasax;Initial Cat
         public DatabaseManager(string connectionString)
         {
             if (string.IsNullOrEmpty(connectionString))
-                connectionString = DEFAULT_CONNECTION_STRING;
+                throw new ArgumentException("Connection string must be provided", nameof(connectionString));
 
-            mConnection = new SqlConnection(connectionString);
+            mDbTools = DbToolsFactory.GetDBTools(connectionString);
+            RegisterEvents(mDbTools);
+
             mErrorMessage = string.Empty;
         }
 
-        //Connection to Database
-        protected bool Open()
-        {
-            try
-            {
-                mConnection.Open();
-                return true;
-            }
-            catch (Exception ex)
-            {
-                mErrorMessage = "Error opening the connection to the database: " + ex.Message;
-                return false;
-            }
-        }
-
-        //Closes Database
-        protected bool Close()
-        {
-            try
-            {
-                mConnection.Close();
-                return true;
-            }
-            catch (Exception ex)
-            {
-                mErrorMessage = "Error closing the connection to the database: " + ex.Message;
-                return false;
-            }
-        }
-
-        protected string GetColumnString(SqlDataReader drReader, int colIndex)
-        {
-            if (drReader.IsDBNull(colIndex))
-            {
-                return string.Empty;
-            }
-            else
-            {
-                return drReader[colIndex].ToString();
-            }
-        }
         /// <summary>
         /// Retrieves Data from database for the given datasetIDs
         /// </summary>
@@ -122,10 +82,6 @@ public const string DEFAULT_CONNECTION_STRING = "Data Source=gigasax;Initial Cat
             var datasetIDsWithMetrics = new SortedSet<int>();
             var metricsByDataset = new Dictionary<int, Dictionary<MetricColumns, string>>();
             var datasets = new System.Text.StringBuilder();
-
-            // Open the database connection
-            if (!Open())
-                return new List<List<string>>();
 
             var startTime = DateTime.UtcNow;
             var lastProgress = DateTime.UtcNow;
@@ -146,56 +102,74 @@ public const string DEFAULT_CONNECTION_STRING = "Data Source=gigasax;Initial Cat
 
                 try
                 {
-                    // Uses are massive SQL command to get the data to come out in the order we want it too
-                    // If you add/remove columns, you must update the iWriteFiles.WriteCsv
-                    var sqlQuery = "SELECT M.[Instrument Group], M.[Dataset_ID], [Instrument], [Dataset], [XIC_WideFrac]" +
-                     ", [MS1_TIC_Change_Q2], [MS1_TIC_Q2], [MS1_Density_Q1], [MS1_Density_Q2], [MS2_Density_Q1], [DS_2A], [DS_2B], [MS1_2B]" +
-                     ", [P_2A], [P_2B], [P_2C], [SMAQC_Job], [Quameter_Job], [XIC_FWHM_Q1], [XIC_FWHM_Q2], [XIC_FWHM_Q3], [XIC_Height_Q2], [XIC_Height_Q3]" +
-                     ", [XIC_Height_Q4], [RT_Duration], [RT_TIC_Q1], [RT_TIC_Q2], [RT_TIC_Q3], [RT_TIC_Q4], [RT_MS_Q1], [RT_MS_Q2], [RT_MS_Q3], [RT_MS_Q4]" +
-                     ", [RT_MSMS_Q1], [RT_MSMS_Q2], [RT_MSMS_Q3], [RT_MSMS_Q4], [MS1_TIC_Change_Q3], [MS1_TIC_Change_Q4], [MS1_TIC_Q3], [MS1_TIC_Q4]" +
-                     ", [MS1_Count], [MS1_Freq_Max], [MS1_Density_Q3], [MS2_Count], [MS2_Freq_Max], [MS2_Density_Q2], [MS2_Density_Q3], [MS2_PrecZ_1]" +
-                     ", [MS2_PrecZ_2], [MS2_PrecZ_3], [MS2_PrecZ_4], [MS2_PrecZ_5], [MS2_PrecZ_more], [MS2_PrecZ_likely_1], [MS2_PrecZ_likely_multi], [Quameter_Last_Affected]" +
-                     ", [C_1A], [C_1B], [C_2A], [C_2B], [C_3A], [C_3B], [C_4A], [C_4B], [C_4C], [DS_1A], [DS_1B], [DS_3A], [DS_3B], [IS_1A], [IS_1B], [IS_2], [IS_3A]" +
-                     ", [IS_3B], [IS_3C], [MS1_1], [MS1_2A], [MS1_3A], [MS1_3B], [MS1_5A], [MS1_5B], [MS1_5C], [MS1_5D], [MS2_1], [MS2_2], [MS2_3], [MS2_4A]" +
-                     ", [MS2_4B], [MS2_4C], [MS2_4D], [P_1A], [P_1B], [P_3], [Smaqc_Last_Affected], [PSM_Source_Job]" +
-                     " FROM [V_Dataset_QC_Metrics] M INNER JOIN [T_Dataset] ON M.[Dataset_ID] = [T_Dataset].[Dataset_ID]" +
-                     " WHERE [T_Dataset].[DS_sec_sep] NOT LIKE 'LC-Agilent-2D-Formic%'" +
-                     " AND M.[Dataset_ID] IN (" + sbDatasets + ")";
+                    // Query to retrieve metric data
+                    // Column names here must be lowercase, and must correspond to the enum names in enum MetricColumns
 
-                    if (skipAlreadyProcessedDatasets)
-                        sqlQuery += " AND M.QCDM Is Null";
+                    var sqlQuery = string.Format(
+                        "SELECT instrument_group, dataset_id, instrument, dataset, xic_wide_frac," +
+                              " ms1_tic_change_q2, ms1_tic_q2, ms1_density_q1, ms1_density_q2, ms2_density_q1, ds_2a, ds_2b, ms1_2b," +
+                              " p_2a, p_2b, p_2c, smaqc_job, quameter_job, xic_fwhm_q1, xic_fwhm_q2, xic_fwhm_q3, xic_height_q2, xic_height_q3," +
+                              " xic_height_q4, rt_duration, rt_tic_q1, rt_tic_q2, rt_tic_q3, rt_tic_q4, rt_ms_q1, rt_ms_q2, rt_ms_q3, rt_ms_q4," +
+                              " rt_msms_q1, rt_msms_q2, rt_msms_q3, rt_msms_q4, ms1_tic_change_q3, ms1_tic_change_q4, ms1_tic_q3, ms1_tic_q4," +
+                              " ms1_count, ms1_freq_max, ms1_density_q3, ms2_count, ms2_freq_max, ms2_density_q2, ms2_density_q3," +
+                              " ms2_prec_z_1, ms2_prec_z_1, ms2_prec_z_2, ms2_prec_z_3, ms2_prec_z_4, ms2_prec_z_5, ms2_prec_z_more, " +
+                              " ms2_prec_z_likely_1, ms2_prec_z_likely_multi, quameter_last_affected," +
+                              " c_1a, c_1b, c_2a, c_2b, c_3a, c_3b, c_4a, c_4b, c_4c, ds_1a, ds_1b, ds_3a, ds_3b, is_1a, is_1b, is_2, is_3a," +
+                              " is_3b, is_3c, ms1_1, ms1_2a, ms1_3a, ms1_3b, ms1_5a, ms1_5b, ms1_5c, ms1_5d, ms2_1, ms2_2, ms2_3, ms2_4a," +
+                              " ms2_4b, ms2_4c, ms2_4d, p_1a, p_1b, p_3, smaqc_last_affected, psm_source_job " +
+                        " FROM V_Dataset_QC_Metrics_Export" +
+                        " WHERE Not separation_type LIKE 'LC-Agilent-2D-Formic%' " +
+                        " AND Dataset_ID IN ({0}) {1}",
+                        datasets, skipAlreadyProcessedDatasets ? " AND QCDM Is Null" : string.Empty);
 
-                    var command = new SqlCommand(sqlQuery, mConnection);
+                    var cmd = mDbTools.CreateCommand(sqlQuery);
 
-                    var drReader = command.ExecuteReader();
+                    var success = mDbTools.GetQueryResultsDataTable(cmd, out var queryResults);
 
-                    if (drReader.HasRows)
+                    if (!success)
                     {
-                        // Append the data to metricsByDataset
-                        // Converts empty values to NA
-                        while (drReader.Read())
-                        {
-                            if (!int.TryParse(GetColumnString(drReader, 1), out var datasetID))
-                            {
-                                Console.WriteLine("Null dataset ID value found in GetData; this is unexpected");
-                            }
-                            else
-                            {
-                                datasetIDsWithMetrics.Add(datasetID);
-
-                                var metrics = new List<string>();
-
-                                for (var j = 0; j < drReader.FieldCount; j++)
-                                {
-                                    metrics.Add(string.IsNullOrWhiteSpace(GetColumnString(drReader, j)) ? "NA" : drReader[j].ToString());
-                                }
-
-                                metricsByDataset.Add(metrics);
-                            }
-                        }
+                        mErrorMessage = "Error obtaining data from V_Dataset_QC_Metrics_Export using GetQueryResultsDataTable";
+                        return new Dictionary<int, Dictionary<MetricColumns, string>>();
                     }
 
-                    drReader.Close();
+                    // Keys in this dictionary are enum values, values are the string name of the enum, converted to lowercase
+                    var columnMap = new Dictionary<MetricColumns, string>();
+
+                    foreach (MetricColumns column in Enum.GetValues(typeof(MetricColumns)))
+                    {
+                        var metricName = Enum.GetName(typeof(MetricColumns), column);
+
+                        if (metricName == null)
+                            throw new NullReferenceException("Encountered a null metric name while populating the column map dictionary");
+
+                        columnMap.Add(column, metricName.ToLower());
+                    }
+
+                    // Append the data to metricsByDataset
+                    // Converts empty values to NA
+                    foreach (DataRow resultRow in queryResults.Rows)
+                    {
+                        var datasetId = mDbTools.GetInteger(resultRow[columnMap[MetricColumns.Dataset_ID]]);
+
+                        if (datasetId == 0)
+                        {
+                            OnWarningEvent("Null dataset ID value found in GetData; this is unexpected");
+                            continue;
+                        }
+
+                        datasetIDsWithMetrics.Add(datasetId);
+
+                        var metrics = new Dictionary<MetricColumns, string>();
+
+                        foreach (var column in columnMap)
+                        {
+                            var textValue = mDbTools.GetString(resultRow[column.Value]);
+
+                            metrics.Add(column.Key, string.IsNullOrWhiteSpace(textValue) ? "NA" : textValue);
+                        }
+
+                        metricsByDataset.Add(datasetId, metrics);
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -217,6 +191,7 @@ public const string DEFAULT_CONNECTION_STRING = "Data Source=gigasax;Initial Cat
 
             // Look for datasets for which metrics were not available
             var warnCount = 0;
+
             foreach (var datasetID in datasetIDs)
             {
                 if (!datasetIDsWithMetrics.Contains(datasetID))
@@ -235,11 +210,7 @@ public const string DEFAULT_CONNECTION_STRING = "Data Source=gigasax;Initial Cat
 
             Console.WriteLine();
 
-            // Close connection
-            Close();
-
             return metricsByDataset;
         }
     }
-
 }

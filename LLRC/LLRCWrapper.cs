@@ -2,8 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Data.SqlClient;
 using System.Text;
+using PRISMDatabaseUtils;
+using System.Data;
 
 namespace LLRC
 {
@@ -62,11 +63,11 @@ namespace LLRC
             mErrorMessage = string.Empty;
 
             if (string.IsNullOrEmpty(connectionString))
-                mConnectionString = DatabaseMang.DEFAULT_CONNECTION_STRING;
-            else
-                mConnectionString = connectionString;
+                throw new ArgumentException("Connection string must be provided", nameof(connectionString));
 
-            mWorkingDirPath = GetAppFolderPath();
+            mConnectionString = DbToolsFactory.AddApplicationNameToConnectionString(connectionString, "LLRC");
+
+            mWorkingDirPath = PRISM.AppUtils.GetAppDirectoryPath();
 
             mMaxResultsToDisplay = 10;
             mPostToDB = false;
@@ -80,87 +81,48 @@ namespace LLRC
         /// <param name="hours"></param>
         /// <param name="connectionString"></param>
         /// <returns>List of Dataset IDs</returns>
-        protected static List<int> FindRecentNewDatasets(int hours, string connectionString)
+        protected List<int> FindRecentNewDatasets(int hours, string connectionString)
         {
             var datasetIDs = new List<int>();
 
             try
             {
-                using (var connection = new SqlConnection(connectionString))
+                var timestampThreshold = DateTime.Now.Subtract(new TimeSpan(hours, 0, 0)).ToString("yyyy-MM-dd hh:mm:ss tt");
+
+                var sqlQuery = string.Format(
+                    " SELECT Dataset_ID" +
+                    " FROM T_Dataset_QC" +
+                    " WHERE QCDM IS NULL AND" +
+                    "       SMAQC_Job IS NOT NULL AND" +
+                    "       (Quameter_Last_Affected >= '{0}' OR Last_Affected >= '{0}')", timestampThreshold);
+
+                var dbTools = DbToolsFactory.GetDBTools(connectionString);
+
+                var cmd = dbTools.CreateCommand(sqlQuery);
+
+                var success = dbTools.GetQueryResultsDataTable(cmd, out var queryResults);
+
+                if (!success)
                 {
-                    connection.Open();
-
-                    var command = new SqlCommand(
-                         " SELECT Dataset_ID" +
-                         " FROM T_Dataset_QC" +
-                         " WHERE (QCDM IS NULL)" +
-                               " AND SMAQC_Job IS NOT NULL" +
-                               " AND (DATEDIFF(hour, Quameter_Last_Affected, GETDATE()) < " + hours + " OR" +
-                                    " DATEDIFF(hour, Last_Affected, GETDATE()) < " + hours + ")", connection);
-
-                    using (var drReader = command.ExecuteReader())
-                    {
-                        if (drReader.HasRows)
-                        {
-                            while (drReader.Read())
-                            {
-                                var datasetID = drReader.GetInt32(0);
-                                datasetIDs.Add(datasetID);
-                            }
-                        }
-                    }
+                    OnWarningEvent("Error obtaining data from v_annotation_type_picker using GetQueryResultsDataTable");
+                    return new List<int>();
                 }
+
+                foreach (DataRow resultRow in queryResults.Rows)
+                {
+                    var datasetId = dbTools.GetInteger(resultRow[0]);
+
+                    datasetIDs.Add(datasetId);
+                }
+
+                return datasetIDs;
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Exception in FindRecentNewDatasets: " + ex.Message);
-            }
-
-            return datasetIDs;
-        }
-
-        /// <summary>
-        /// Returns the full path to the folder that contains the currently executing .Exe or .Dll
-        /// </summary>
-        /// <returns></returns>
-        public string GetAppFolderPath()
-        {
-            // Could use Application.StartupPath, but .GetExecutingAssembly is better
-            return Path.GetDirectoryName(GetAppPath());
-        }
-
-        /// <summary>
-        /// Returns the full path to the executing .Exe or .Dll
-        /// </summary>
-        /// <returns>File path</returns>
-        /// <remarks></remarks>
-        public string GetAppPath()
-        {
-            return System.Reflection.Assembly.GetExecutingAssembly().Location;
-        }
-
-        /// <summary>
-        /// Extracts the DatasetID value from ColIndex 1 in metricsOneDataset
-        /// </summary>
-        /// <param name="metricsOneDataset"></param>
-        /// <returns>The DatasetID as an integer, or 0 if an error</returns>
-        public static int GetDatasetIdForMetricRow(List<string> metricsOneDataset)
-        {
-            if (metricsOneDataset == null || metricsOneDataset.Count < DatabaseMang.MetricColumnIndex.DatasetID)
-            {
-                Console.WriteLine("GetDatasetIdForMetricRow: metricsOneDataset is invalid");
-                return 0;
-            }
-
-            if (!int.TryParse(metricsOneDataset[DatabaseMang.MetricColumnIndex.DatasetID], out var datasetID))
-            {
-                return 0;
                 OnErrorEvent("Exception in FindRecentNewDatasets", ex);
+                return new List<int>();
             }
-
-            return datasetID;
         }
-
 
         /// <summary>
         /// Reads the R Output file to look for errors
@@ -206,8 +168,10 @@ namespace LLRC
         /// <param name="errorMessage">Output: Error message</param>
         /// <param name="processingTimespan">Output: set to true if processing a time span</param>
         /// <returns>True if success; false if an error or no Dataset IDs</returns>
-        public static List<int> ParseDatasetIDList(string datasetIDList, string connectionString, out string errorMessage, out bool processingTimespan)
+        public List<int> ParseDatasetIDList(string datasetIDList, string connectionString, out string errorMessage, out bool processingTimespan)
         {
+            var connectionStringToUse = DbToolsFactory.AddApplicationNameToConnectionString(connectionString, "LLRC");
+
             var datasetIDs = new List<int>();
             int value;
 
@@ -220,7 +184,6 @@ namespace LLRC
                 errorMessage = "datasetIDList is empty";
                 return new List<int>();
             }
-
 
             if (datasetIDList.IndexOf(',') > 0)
             {
@@ -285,7 +248,7 @@ namespace LLRC
                 // Timespan
                 if (int.TryParse(datasetIDList.Substring(0, datasetIDList.Length - 1), out var hours))
                 {
-                    datasetIDs = FindRecentNewDatasets(hours, connectionString);
+                    datasetIDs = FindRecentNewDatasets(hours, connectionStringToUse);
                     processingTimespan = true;
 
                     if (datasetIDs.Count == 0)
@@ -312,8 +275,8 @@ namespace LLRC
         /// Processes the Dataset IDs in datasetIDs
         /// </summary>
         /// <param name="datasetIDs"></param>
-        /// <returns>True if success, otherwise false</returns>
         /// <remarks>Use property ErrorMessage to view any error messages</remarks>
+        /// <returns>True if success, otherwise false</returns>
         public bool ProcessDatasets(List<int> datasetIDs)
         {
             try
