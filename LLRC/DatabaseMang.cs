@@ -118,7 +118,7 @@ public const string DEFAULT_CONNECTION_STRING = "Data Source=gigasax;Initial Cat
         /// </summary>
         /// <param name="datasetIDs"></param>
         /// <param name="skipAlreadyProcessedDatasets">Set to True to skip DatasetIDs that already have a QCDM value</param>
-        /// <returns></returns>
+        /// <returns>QC data, as List of List of strings</returns>
         public List<List<string>> GetData(List<int> datasetIDs, bool skipAlreadyProcessedDatasets)
         {
             const int CHUNK_SIZE = 500;

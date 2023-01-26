@@ -19,7 +19,7 @@ namespace LLRC
         /// </summary>
         public WriteFiles()
         {
-             mRProgramPath = GetRPathFromWindowsRegistry();
+            mRProgramPath = GetRPathFromWindowsRegistry();
         }
 
         /// <summary>
@@ -30,8 +30,8 @@ namespace LLRC
         /// <param name="requiredValues"></param>
         /// <param name="showWarning"></param>
         /// <param name="sb"></param>
-        /// <returns>True if hte metrics are valid, otherwise false</returns>
         protected bool AppendToCsv(string instrumentGroup, List<string> metricsOneDataset, Dictionary<int, string> requiredValues, bool showWarning, ref StringBuilder sb)
+        /// <returns>True if the metrics are valid, otherwise false</returns>
         {
             var datasetID = LLRCWrapper.GetDatasetIdForMetricRow(metricsOneDataset);
 
@@ -257,7 +257,7 @@ namespace LLRC
         /// <summary>
         /// Gets the location of where the R is installed
         /// </summary>
-        /// <returns></returns>
+        /// <returns>Full path to R.exe</returns>
         public string GetRPathFromWindowsRegistry()
         {
             const string R_CORE_KEY_NAME = @"SOFTWARE\R-core";

@@ -11,13 +11,13 @@ namespace LLRCRunner
     // Written by Josh Davis and Matthew Monroe for the Department of Energy (PNNL, Richland, WA)
     //
     // E-mail: matthew.monroe@pnl.gov or proteomics@pnnl.gov
-    // Website: http://panomics.pnnl.gov/ or http://omics.pnl.gov or http://www.sysbio.org/resources/staff/
+    // Website: https://github.com/PNNL-Comp-Mass-Spec/ or https://panomics.pnnl.gov/ or https://www.pnnl.gov/integrative-omics
     // -------------------------------------------------------------------------------
     //
 
     internal class Program
     {
-        public const string PROGRAM_DATE = "September 21, 2018";
+        public const string PROGRAM_DATE = "January 25, 2023";
 
         protected const string CONNECTION_STRING = "Data Source=gigasax;Initial Catalog=DMS5;Integrated Security=SSPI;";
 

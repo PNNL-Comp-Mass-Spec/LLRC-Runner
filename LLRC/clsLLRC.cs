@@ -91,7 +91,7 @@ namespace LLRC
         /// </summary>
         /// <param name="hours"></param>
         /// <param name="connectionString"></param>
-        /// <returns></returns>
+        /// <returns>List of Dataset IDs</returns>
         protected static List<int> FindRecentNewDatasets(int hours, string connectionString)
         {
             var datasetIDs = new List<int>();
