@@ -427,7 +427,8 @@ namespace LLRC
                         }
                         else
                         {
-                            retry -= 1;
+                            retry--;
+
                             if (post.Errors.Count == 0)
                             {
                                 mErrorMessage = "Unknown error posting results to the database";

@@ -136,7 +136,7 @@ public const string DEFAULT_CONNECTION_STRING = "Data Source=gigasax;Initial Cat
             {
                 // Construct a comma-separated list of dataset IDs
                 datasets.Clear();
-                for (var j = i; j < i + CHUNK_SIZE && j < datasetIDs.Count; j += 1)
+                for (var j = i; j < i + CHUNK_SIZE && j < datasetIDs.Count; j++)
                 {
                     if (datasets.Length > 0)
                         datasets.Append(",");

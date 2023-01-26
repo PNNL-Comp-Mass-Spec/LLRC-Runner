@@ -239,13 +239,13 @@ namespace LLRC
                 {
                     if (!validInstrumentGroup)
                     {
-                        instrumentWarnCount += 1;
+                        instrumentWarnCount++;
                         if (instrumentWarnCount <= 10)
                             Console.WriteLine("Unsupported instrument group \"" + instrumentGroup + "\" for DatasetID " + datasetID);
                     }
                     else
                     {
-                        warnCount += 1;
+                        warnCount++;
                         if (warnCount == 10)
                             showWarning = false;
                     }
