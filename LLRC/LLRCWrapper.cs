@@ -309,12 +309,20 @@ namespace LLRC
                 // Writes the data.csv file from the data gathered from database
                 // Writes the R file and the batch file to run it
                 var wf = new WriteFiles();
-                wf.DeleteFiles(mWorkingDirPath);
-                var validDatasetIDs = wf.WriteCsv(metricsByDataset, mWorkingDirPath);
                 RegisterEvents(wf);
 
-                wf.WriteRFile(mWorkingDirPath);
-                wf.WriteBatch(mWorkingDirPath);
+                if (!string.IsNullOrWhiteSpace(wf.ErrorMessage))
+                {
+                    mErrorMessage = "Error determining the path to R.exe: " + wf.ErrorMessage;
+                    OnErrorEvent(mErrorMessage);
+                    return false;
+                }
+
+                wf.DeleteFiles(WorkingDirectory);
+                var validDatasetIDs = wf.WriteCsv(metricsByDataset, WorkingDirectory);
+
+                wf.WriteRFile(WorkingDirectory);
+                wf.WriteBatch(WorkingDirectory);
 
                 if (validDatasetIDs.Count == 0)
                 {
