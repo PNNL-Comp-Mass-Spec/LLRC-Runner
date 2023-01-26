@@ -7,7 +7,7 @@ using System.Text;
 
 namespace LLRC
 {
-    public class LLRCWrapper
+    public class LLRCWrapper : PRISM.EventNotifier
     {
         public const string NO_NEW_RECENT_DATASETS = "No new datasets found with new QC values from the last";
 
@@ -154,8 +154,8 @@ namespace LLRC
 
             if (!int.TryParse(metricsOneDataset[DatabaseMang.MetricColumnIndex.DatasetID], out var datasetID))
             {
-                Console.WriteLine("GetDatasetIdForMetricRow: Dataset ID is not an integer; this is unexpected");
                 return 0;
+                OnErrorEvent("Exception in FindRecentNewDatasets", ex);
             }
 
             return datasetID;
@@ -392,14 +392,15 @@ namespace LLRC
 
                     // Display results for the first 10 datasets
                     Console.WriteLine();
-                    Console.WriteLine("Results:");
+                    OnStatusEvent("Results:");
+
                     foreach (var item in qcdmResults)
                     {
-                        Console.WriteLine("DatasetID " + item.Key + ": " + item.Value);
-                        datasetCountDisplayed += 1;
+                        OnStatusEvent("DatasetID " + item.Key + ": " + item.Value);
+                        datasetCountDisplayed++;
                         if (datasetCountDisplayed >= mMaxResultsToDisplay)
                         {
-                            Console.WriteLine("Results for " + (qcdmResults.Count - datasetCountDisplayed) + " additional datasets not displayed");
+                            OnStatusEvent("Results for " + (qcdmResults.Count - datasetCountDisplayed) + " additional datasets not displayed");
                             break;
                         }
                     }
@@ -441,7 +442,7 @@ namespace LLRC
                                         mErrorMessage += "; " + error;
                                 }
 
-                                Console.WriteLine("Error in ProcessDatasets (retry=" + retry + "): " + mErrorMessage);
+                                OnErrorEvent("Error in ProcessDatasets (retry={0}): {1}", retry, mErrorMessage);
                             }
                         }
 
@@ -465,9 +466,9 @@ namespace LLRC
             }
 
             // Displays errors if any occur
-            catch (Exception e)
+            catch (Exception ex)
             {
-                mErrorMessage = "Error processing the datasets: " + e.Message + "\n" + e.StackTrace;
+                OnErrorEvent("Exception in ProcessDatasets", ex);
                 return false;
             }
 
@@ -497,7 +498,7 @@ namespace LLRC
             var abortProcessing = false;
 
             Console.WriteLine();
-            Console.WriteLine("Starting R to compute LLRC for " + datasetCount + " dataset" + (datasetCount > 1 ? "s" : ""));
+            OnStatusEvent("Starting R to compute LLRC for " + datasetCount + " dataset" + (datasetCount > 1 ? "s" : ""));
 
             var sleepTimeMsec = 500;
 
@@ -537,7 +538,7 @@ namespace LLRC
                 return false;
             }
 
-            Console.WriteLine("  LLRC computation complete");
+            OnStatusEvent("  LLRC computation complete");
 
             return true;
         }

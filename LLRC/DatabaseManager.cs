@@ -192,6 +192,7 @@ public const string DEFAULT_CONNECTION_STRING = "Data Source=gigasax;Initial Cat
                 }
                 catch (Exception ex)
                 {
+                    OnErrorEvent("Error obtaining QC Metric value", ex);
                     mErrorMessage = "Error obtaining QC Metric values: " + ex.Message;
                     return new List<List<string>>();
                 }
@@ -202,7 +203,7 @@ public const string DEFAULT_CONNECTION_STRING = "Data Source=gigasax;Initial Cat
                 if (showProgress && DateTime.UtcNow.Subtract(lastProgress).TotalMilliseconds >= 333)
                 {
                     var percentComplete = (i + CHUNK_SIZE) / (double)datasetIDs.Count * 100;
-                    Console.WriteLine("Retrieving metrics from the database: " + percentComplete.ToString("0.0") + "% complete");
+                    OnDebugEvent("Retrieving metrics from the database: " + percentComplete.ToString("0.0") + "% complete");
                     lastProgress = DateTime.UtcNow;
                 }
             }
@@ -213,17 +214,17 @@ public const string DEFAULT_CONNECTION_STRING = "Data Source=gigasax;Initial Cat
             {
                 if (!datasetIDsWithMetrics.Contains(datasetID))
                 {
-                    warnCount += 1;
+                    warnCount++;
                     if (warnCount <= 10)
-                        Console.WriteLine("Warning: DatasetID does not have QC Metrics: " + datasetID);
+                        OnWarningEvent("Warning: DatasetID does not have QC Metrics: " + datasetID);
                 }
             }
 
             if (warnCount > 10)
-                Console.WriteLine(" ... " + (warnCount - 10) + " additional warnings not shown");
+                OnWarningEvent(" ... " + (warnCount - 10) + " additional warnings not shown");
 
             if (datasetIDs.Count > 1)
-                Console.WriteLine("\nRetrieved dataset metrics for " + metricsByDataset.Count + " / " + datasetIDs.Count + " datasets");
+                OnStatusEvent("\nRetrieved dataset metrics for " + metricsByDataset.Count + " / " + datasetIDs.Count + " datasets");
 
             Console.WriteLine();
 

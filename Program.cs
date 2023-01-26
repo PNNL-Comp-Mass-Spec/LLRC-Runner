@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using LLRC;
 using PRISM;
+using PRISM.Logging;
 
 namespace LLRCRunner
 {
@@ -58,8 +59,21 @@ namespace LLRCRunner
                     return -1;
                 }
 
+
+                var processingClass = new LLRCWrapper(CONNECTION_STRING)
+                {
+                    MaxResultsToDisplay = mMaxResultsToDisplay,
+                    PostToDB = mPostToDB,
+                    SkipAlreadyProcessedDatasets = mSkipAlreadyProcessedDatasets
+                };
+
+                RegisterEvents(processingClass);
+
+
                 // Parse the dataset ID list
-                var datasetIDs = LLRCWrapper.ParseDatasetIDList(mDatasetIDList, CONNECTION_STRING, out var errorMessage, out var processingTimespan);
+                var datasetIDs = processingClass.ParseDatasetIDList(mDatasetIDList, CONNECTION_STRING, out var errorMessage, out var processingTimespan);
+
+                processingClass.ProcessingTimespan = processingTimespan;
 
                 if (datasetIDs.Count == 0)
                 {
@@ -67,23 +81,15 @@ namespace LLRCRunner
                     {
                         // No new, recent datasets
                         // This is not a critical error
-                        Console.WriteLine(errorMessage);
+                        OnWarningEvent(errorMessage);
                         return 0;
                     }
 
                     // Dataset IDs not defined
-                    ShowErrorMessage(errorMessage);
+                    OnErrorEvent(errorMessage);
                     ShowProgramHelp();
                     return -2;
                 }
-
-                var processingClass = new LLRCWrapper
-                {
-                    MaxResultsToDisplay = mMaxResultsToDisplay,
-                    PostToDB = mPostToDB,
-                    SkipAlreadyProcessedDatasets = mSkipAlreadyProcessedDatasets,
-                    ProcessingTimespan = processingTimespan
-                };
 
                 if (!string.IsNullOrWhiteSpace(mWorkingDirectory))
                     processingClass.WorkingDirectory = mWorkingDirectory;
@@ -93,16 +99,16 @@ namespace LLRCRunner
                 if (!success)
                 {
                     if (processingClass.ErrorMessage.StartsWith("Error processing the datasets"))
-                        ShowErrorMessage(processingClass.ErrorMessage);
+                        OnErrorEvent(processingClass.ErrorMessage);
                     else
-                        ShowErrorMessage("Error processing the datasets: " + processingClass.ErrorMessage);
+                        OnErrorEvent("Error processing the datasets: " + processingClass.ErrorMessage);
 
                     return -3;
                 }
             }
             catch (Exception ex)
             {
-                ShowErrorMessage("Error occurred in Program->Main: " + ex.Message, ex);
+                OnErrorEvent("Error occurred in Program->Main: " + ex.Message, ex);
                 return -1;
             }
 
@@ -131,7 +137,7 @@ namespace LLRCRunner
                         badArguments.Add("/" + item);
                     }
 
-                    ShowErrorMessage("Invalid command line parameters", badArguments);
+                    OnErrorEvent("Invalid command line parameters", badArguments);
 
                     return false;
                 }
@@ -172,20 +178,10 @@ namespace LLRCRunner
             }
             catch (Exception ex)
             {
-                ShowErrorMessage("Error parsing the command line parameters: " + ex.Message, ex);
+                OnErrorEvent("Error parsing the command line parameters: " + ex.Message, ex);
             }
 
             return false;
-        }
-
-        private static void ShowErrorMessage(string message, Exception ex = null)
-        {
-            ConsoleMsgUtils.ShowError(message, ex);
-        }
-
-        private static void ShowErrorMessage(string title, IEnumerable<string> errorMessages)
-        {
-            ConsoleMsgUtils.ShowErrors(title, errorMessages);
         }
 
         private static void ShowProgramHelp()
@@ -231,8 +227,41 @@ namespace LLRCRunner
             }
             catch (Exception ex)
             {
-                ShowErrorMessage("Error displaying the program syntax: " + ex.Message, ex);
+                OnErrorEvent("Error displaying the program syntax: " + ex.Message, ex);
             }
+        }
+
+        /// <summary>
+        /// Use this method to chain events between classes
+        /// </summary>
+        /// <param name="sourceClass"></param>
+        private static void RegisterEvents(IEventNotifier sourceClass)
+        {
+            // Ignore: sourceClass.DebugEvent += OnDebugEvent;
+            sourceClass.StatusEvent += OnStatusEvent;
+            sourceClass.ErrorEvent += OnErrorEvent;
+            sourceClass.WarningEvent += OnWarningEvent;
+            // Ignore: sourceClass.ProgressUpdate += OnProgressUpdate;
+        }
+
+        private static void OnErrorEvent(string format, params object[] args)
+        {
+            ConsoleMsgUtils.ShowError(format, args);
+        }
+
+        private static void OnErrorEvent(string message, Exception ex)
+        {
+            ConsoleMsgUtils.ShowError(message, ex);
+        }
+
+        private static void OnStatusEvent(string message)
+        {
+            Console.WriteLine(message);
+        }
+
+        private static void OnWarningEvent(string message)
+        {
+            ConsoleMsgUtils.ShowWarning(message);
         }
     }
 }

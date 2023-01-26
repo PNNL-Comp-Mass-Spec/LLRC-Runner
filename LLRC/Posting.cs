@@ -4,7 +4,7 @@ using System.IO;
 
 namespace LLRC
 {
-    class Posting
+    class Posting : EventNotifier
     {
         public const string STORED_PROCEDURE = "StoreQCDMResults";
 
@@ -94,6 +94,8 @@ namespace LLRC
                 }
                 catch (Exception ex)
                 {
+                    OnErrorEvent(string.Format("Exception storing results for dataset ID {0}", currentDatasetID), ex);
+
                     mErrors.Add("Exception posting to the database: " + ex.Message);
                 }
 
@@ -104,7 +106,8 @@ namespace LLRC
             }
             catch (Exception ex)
             {
-                mErrors.Add("Exception caching the results: " + ex.Message);
+                OnErrorEvent("Exception loading the QCDM results", ex);
+                mErrors.Add("Exception loading the results: " + ex.Message);
             }
 
 
@@ -209,8 +212,7 @@ namespace LLRC
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error converting Quameter results to XML; details:");
-                Console.WriteLine(ex);
+                OnErrorEvent("Error converting Quameter results to XML", ex);
                 return string.Empty;
             }
         }
