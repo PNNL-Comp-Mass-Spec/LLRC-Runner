@@ -181,7 +181,10 @@ namespace LLRC
             }
 
             // Append the current year
-            sb.AppendLine(DateTime.Now.Year.ToString());
+            sb.Append(DateTime.Now.Year.ToString());
+
+            // Append a newline character
+            sb.AppendLine();
 
             return true;
         }
