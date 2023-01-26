@@ -59,29 +59,22 @@ namespace LLRC
             return true;
         }
 
-
-        /// <summary>
-        /// Factory method to create a generic list given several values
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="values"></param>
-        /// <returns></returns>
-        protected List<T> CreateList<T>(params T[] values)
-        {
-            return new List<T>(values);
-        }
-
         /// <summary>
         /// Deletes old files so they don't interfere with new ones
         /// </summary>
         /// <param name="workingDirPath"></param>
         public void DeleteFiles(string workingDirPath)
         {
-            var filesToDelete = CreateList("TestingDataset.csv", "data.csv");
+            var filesToDelete = new List<string>
+            {
+                "TestingDataset.csv",
+                "data.csv"
+            };
 
             foreach (var fileName in filesToDelete)
             {
                 var targetFile = new FileInfo(Path.Combine(workingDirPath, fileName));
+
                 if (targetFile.Exists)
                     targetFile.Delete();
             }
