@@ -253,14 +253,19 @@ namespace LLRC
         public void WriteRFile(string workingDirPath)
         {
             var folderPathUnix = workingDirPath.Replace(@"\", "/");
+
             if (!folderPathUnix.EndsWith("/"))
                 folderPathUnix += '/';
+
+            // ReSharper disable StringLiteralTypo
 
             var contents = "require(QCDM)" + "\n" +
             "outDataName <- " + '"' + folderPathUnix + LLRCWrapper.RDATA_FILE_ALLDATA + '"' + "\n" +
             "outputFolder <- " + '"' + folderPathUnix + '"' + "\n" +
             "ncdataFilename <- " + '"' + folderPathUnix + "data.csv" + '"' + "\n" +
             "noncuratedPrediction(ncdataFilename=ncdataFilename, modelsFile=paste(outputFolder,\"" + LLRCWrapper.RDATA_FILE_MODELS + "\",sep=\"\"), dataFilename=outDataName,outputFolder=outputFolder)";
+
+            // ReSharper restore StringLiteralTypo
 
             File.WriteAllText(Path.Combine(workingDirPath, LLR_SCRIPT_NAME), contents);
         }
