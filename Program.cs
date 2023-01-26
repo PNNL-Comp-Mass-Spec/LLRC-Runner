@@ -18,7 +18,7 @@ namespace LLRCRunner
 
     internal class Program
     {
-        public const string PROGRAM_DATE = "January 25, 2023";
+        public const string PROGRAM_DATE = "January 26, 2023";
 
         protected const string CONNECTION_STRING = "Data Source=gigasax;Initial Catalog=DMS5;Integrated Security=SSPI;";
 
@@ -30,7 +30,7 @@ namespace LLRCRunner
 
         protected static bool mSkipAlreadyProcessedDatasets;
 
-        public static int Main(string[] args)
+        public static int Main()
         {
             var commandLineParser = new clsParseCommandLine();
 
@@ -59,7 +59,6 @@ namespace LLRCRunner
                     return -1;
                 }
 
-
                 var processingClass = new LLRCWrapper(CONNECTION_STRING)
                 {
                     MaxResultsToDisplay = mMaxResultsToDisplay,
@@ -68,7 +67,6 @@ namespace LLRCRunner
                 };
 
                 RegisterEvents(processingClass);
-
 
                 // Parse the dataset ID list
                 var datasetIDs = processingClass.ParseDatasetIDList(mDatasetIDList, CONNECTION_STRING, out var errorMessage, out var processingTimespan);
@@ -169,7 +167,6 @@ namespace LLRCRunner
                 }
 
                 return true;
-
             }
             catch (Exception ex)
             {
