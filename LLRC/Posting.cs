@@ -15,8 +15,6 @@ namespace LLRC
 
         private string mErrorMessage;
 
-        private string mStoredProcedureError;
-
         public List<int> BadDatasetIDs { get; }
 
         public List<string> Errors { get; }
@@ -96,10 +94,7 @@ namespace LLRC
 
                         BadDatasetIDs.Add(datasetID);
 
-                        if (string.IsNullOrEmpty(mStoredProcedureError))
-                            Errors.Add(mErrorMessage);
-                        else
-                            Errors.Add(mErrorMessage + "; " + mStoredProcedureError);
+                        Errors.Add(mErrorMessage);
                     }
                 }
                 catch (Exception ex)
@@ -235,7 +230,6 @@ namespace LLRC
         private bool PostQCDMResultsToDb(int datasetId, string xmlResults, string connectionString, string storedProcedure)
         {
             mErrorMessage = string.Empty;
-            mStoredProcedureError = string.Empty;
 
             try
             {
