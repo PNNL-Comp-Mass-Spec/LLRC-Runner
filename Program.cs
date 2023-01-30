@@ -7,7 +7,7 @@ using PRISM.Logging;
 namespace LLRCRunner
 {
     // -------------------------------------------------------------------------------
-    // This program computes the LLRC values for a given set of SMAQC (Software Metrics for Analysis of Quality Control) and Quameter values
+    // This program uses LLRC to compute QCDM values using QC metric values from Quameter and SMAQC (Software Metrics for Analysis of Quality Control)
     // Written by Josh Davis and Matthew Monroe for the Department of Energy (PNNL, Richland, WA)
     //
     // E-mail: matthew.monroe@pnl.gov or proteomics@pnnl.gov
@@ -182,14 +182,14 @@ namespace LLRCRunner
             try
             {
                 Console.WriteLine();
-                Console.WriteLine("This program uses LLRC to compute the QCDM value using QC Metric values from Quameter and SMAQC (Software Metrics for Analysis of Quality Control)");
+                Console.WriteLine("This program uses LLRC to compute QCDM values using QC metric values from Quameter and SMAQC (Software Metrics for Analysis of Quality Control)");
                 Console.WriteLine();
                 Console.WriteLine("Program syntax:" + Environment.NewLine + exeName);
 
                 Console.WriteLine(" DatasetIDList [/W:WorkingDirectory] [/DB] [/Skip]");
 
                 Console.WriteLine();
-                Console.WriteLine("DatasetIDList can be a single DatasetID, a list of DatasetIDs separated by commas, a range of DatasetIDs separated with a dash, or a timespan in hours.  Examples:");
+                Console.WriteLine("DatasetIDList can be a single dataset ID, a list of dataset IDs separated by commas, a range of dataset IDs separated with a dash, or a timespan in hours. Examples:");
                 Console.WriteLine(" " + exeName + " 325145                 (will process 1 dataset)");
                 Console.WriteLine(" " + exeName + " 325145,325146,325150   (will process 3 datasets)");
                 Console.WriteLine(" " + exeName + " 325145-325150          (will process 6 dataset)");
