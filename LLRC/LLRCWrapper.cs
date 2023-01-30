@@ -63,7 +63,7 @@ namespace LLRC
         /// </summary>
         /// <param name="hours"></param>
         /// <param name="connectionString"></param>
-        /// <returns>List of Dataset IDs</returns>
+        /// <returns>List of dataset IDs</returns>
         private List<int> FindRecentNewDatasets(int hours, string connectionString)
         {
             var datasetIDs = new List<int>();
@@ -154,7 +154,7 @@ namespace LLRC
         /// <param name="connectionString"></param>
         /// <param name="errorMessage">Output: Error message</param>
         /// <param name="processingTimespan">Output: set to true if processing a time span</param>
-        /// <returns>True if success; false if an error or no Dataset IDs</returns>
+        /// <returns>True if success; false if an error or no dataset IDs</returns>
         public List<int> ParseDatasetIDList(string datasetIDList, string connectionString, out string errorMessage, out bool processingTimespan)
         {
             var connectionStringToUse = DbToolsFactory.AddApplicationNameToConnectionString(connectionString, "LLRC");
@@ -259,7 +259,7 @@ namespace LLRC
         }
 
         /// <summary>
-        /// Processes the Dataset IDs in datasetIDs
+        /// Processes the dataset IDs in datasetIDs
         /// </summary>
         /// <param name="datasetIDs"></param>
         /// <remarks>Use property ErrorMessage to view any error messages</remarks>
@@ -363,6 +363,7 @@ namespace LLRC
                     {
                         OnStatusEvent("DatasetID " + item.Key + ": " + item.Value);
                         datasetCountDisplayed++;
+
                         if (datasetCountDisplayed >= MaxResultsToDisplay)
                         {
                             OnStatusEvent("Results for " + (qcdmResults.Count - datasetCountDisplayed) + " additional datasets not displayed");
@@ -384,6 +385,7 @@ namespace LLRC
                         PRISM.AppUtils.GarbageCollectNow();
 
                         var post = new Posting(mConnectionString);
+
                         success = post.PostToDatabase(metricsByDataset, validDatasetIDs, WorkingDirectory, datasetIdColumnIndex);
 
                         if (success)

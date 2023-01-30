@@ -34,7 +34,7 @@ namespace LLRC
         /// <summary>
         /// Posts the QCDM metric to the database
         /// </summary>
-        /// <param name="metricsByDataset">Dictionary where keys are Dataset IDs and values are the metric values</param>
+        /// <param name="metricsByDataset">Dictionary where keys are dataset IDs and values are the metric values</param>
         /// <param name="validDatasetIDs"></param>
         /// <param name="workingDirPath"></param>
         /// <param name="datasetIdColumnIndex">Column index in the results file (TestingDataset.csv) of the Dataset_ID column</param>
@@ -79,14 +79,14 @@ namespace LLRC
 
                         if (!results.TryGetValue(datasetID, out var llrcPrediction))
                         {
-                            OnWarningEvent("LLRC value not computed for DatasetID " + datasetID);
+                            OnWarningEvent("LLRC value not computed for dataset ID " + datasetID);
                             continue;
                         }
 
                         // Create XML for posting to the database
                         var xml = ConvertQCDMtoXml(llrcPrediction, smaqcJob, quameterJob, datasetName);
 
-                        //attempts to post to database and returns true or false
+                        // Send the XML to the database
                         var success = PostQCDMResultsToDb(datasetID, xml, mConnectionString, STORED_PROCEDURE);
 
                         if (success)
@@ -123,6 +123,7 @@ namespace LLRC
         /// </summary>
         /// <param name="workingDirPath"></param>
         /// <param name="datasetIdColumnIndex"></param>
+        /// <returns>Dictionary, where keys are dataset ID values, and values are QCDM values (aka LLRC.Prediction values)</returns>
         public Dictionary<int, string> LoadQCDMResults(string workingDirPath, int datasetIdColumnIndex)
         {
             var resultsFilePath = Path.Combine(workingDirPath, "TestingDataset.csv");
@@ -152,7 +153,7 @@ namespace LLRC
 
                     if (!headersParsed)
                     {
-                        // The final column should be the LLRC value
+                        // The final column should be the LLRC value, with column header "LLRC.Prediction" (including the double quotes)
                         if (resultValues[resultValues.Length - 1].StartsWith("\"LLRC.Prediction"))
                         {
                             colIndexLLRC = resultValues.Length - 1;
@@ -233,7 +234,7 @@ namespace LLRC
 
             try
             {
-                OnStatusEvent("Posting QCDM Results to the database for Dataset ID " + datasetId);
+                OnStatusEvent("Posting QCDM Results to the database for dataset ID " + datasetId);
 
                 // We need to remove the encoding line from xmlResults before posting to the DB
                 // This line will look like this:

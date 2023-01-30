@@ -6,9 +6,8 @@ using PRISM.Logging;
 
 namespace LLRCRunner
 {
-    // This program computes the LLRC values for a given set of Smaqc and Quameter values
-    //
     // -------------------------------------------------------------------------------
+    // This program computes the LLRC values for a given set of SMAQC (Software Metrics for Analysis of Quality Control) and Quameter values
     // Written by Josh Davis and Matthew Monroe for the Department of Energy (PNNL, Richland, WA)
     //
     // E-mail: matthew.monroe@pnl.gov or proteomics@pnnl.gov
@@ -18,7 +17,7 @@ namespace LLRCRunner
 
     internal class Program
     {
-        public const string PROGRAM_DATE = "January 26, 2023";
+        public const string PROGRAM_DATE = "January 30, 2023";
 
         protected const string CONNECTION_STRING = "Data Source=gigasax;Initial Catalog=DMS5;Integrated Security=SSPI;";
 
@@ -183,7 +182,7 @@ namespace LLRCRunner
             try
             {
                 Console.WriteLine();
-                Console.WriteLine("This program uses LLRC to compute the QCDM value using QC Metric values from Quameter and Smaqc.");
+                Console.WriteLine("This program uses LLRC to compute the QCDM value using QC Metric values from Quameter and SMAQC (Software Metrics for Analysis of Quality Control)");
                 Console.WriteLine();
                 Console.WriteLine("Program syntax:" + Environment.NewLine + exeName);
 
