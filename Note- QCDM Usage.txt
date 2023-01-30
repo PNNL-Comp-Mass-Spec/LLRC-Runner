@@ -2,11 +2,13 @@ QCDM was originally compiled with R 2.x; the following files are for use with R 
   Lib\QCDM_2013.07.26.zip
   Lib\QCDM_2013.09.27.zip
 
-It was updated (minimally) to work with R 3.x in March 2020:
+In March 2020 it was updated to work with R 3.x (and also R 4.x)
   Lib\QCDM contains the R Studio project
   Lib\QCDM_2020.05.04.tar.gz
 
 Prior to November 2015 the Analysis Manager ran QCDM as part of the SMAQC step tool.
-After installing R 3.x that processing no longer worked and QCDM is thus skipped.
+* After installing R 3.x that processing no longer worked and QCDM is thus skipped
 
-QCDM is, however, run by Gigasax, starting it using Sql Server Agent job "Compute LLRC"
+QCDM is, however, run every 4 hours on Gigasax, started via the DMS Program Runner
+
+(prior to 2023 it was started using SQL Server Agent job "Compute LLRC")
