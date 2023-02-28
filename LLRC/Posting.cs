@@ -9,7 +9,7 @@ namespace LLRC
 {
     internal class Posting : EventNotifier
     {
-        public const string STORED_PROCEDURE = "StoreQCDMResults";
+        public const string STORED_PROCEDURE = "store_qcdm_results";
 
         private readonly string mConnectionString;
 
@@ -252,7 +252,7 @@ namespace LLRC
                     xmlResultsClean = xmlResults;
                 }
 
-                // Call stored procedure StoreQCDMResults
+                // Call stored procedure store_qcdm_results
                 var dbTools = DbToolsFactory.GetDBTools(connectionString);
 
                 var cmdPost = dbTools.CreateCommand(storedProcedure, CommandType.StoredProcedure);

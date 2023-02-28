@@ -17,7 +17,7 @@ namespace LLRCRunner
 
     internal class Program
     {
-        public const string PROGRAM_DATE = "January 30, 2023";
+        public const string PROGRAM_DATE = "February 27, 2023";
 
         protected const string CONNECTION_STRING = "Data Source=gigasax;Initial Catalog=DMS5;Integrated Security=SSPI;";
 
