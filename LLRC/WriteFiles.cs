@@ -359,7 +359,9 @@ namespace LLRC
                 if (instrumentGroup.Equals("VelosOrbi", StringComparison.OrdinalIgnoreCase) ||
                     instrumentGroup.Equals("QExactive", StringComparison.OrdinalIgnoreCase) ||
                     instrumentGroup.Equals("Lumos", StringComparison.OrdinalIgnoreCase) ||
-                    instrumentGroup.Equals("QEHFX", StringComparison.OrdinalIgnoreCase))
+                    instrumentGroup.Equals("QEHFX", StringComparison.OrdinalIgnoreCase) ||
+                    instrumentGroup.Equals("Eclipse", StringComparison.OrdinalIgnoreCase) ||
+                    instrumentGroup.Equals("Exploris", StringComparison.OrdinalIgnoreCase))
                 {
                     validInstrumentGroup = true;
                     requiredValues.Add(DatabaseManager.MetricColumns.XIC_Wide_Frac);
