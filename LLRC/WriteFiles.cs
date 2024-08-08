@@ -362,7 +362,8 @@ namespace LLRC
                     instrumentGroup.Equals("QEHFX", StringComparison.OrdinalIgnoreCase) ||
                     instrumentGroup.Equals("Eclipse", StringComparison.OrdinalIgnoreCase) ||
                     instrumentGroup.Equals("Exploris", StringComparison.OrdinalIgnoreCase) ||
-                    instrumentGroup.Equals("Ascend", StringComparison.OrdinalIgnoreCase))
+                    instrumentGroup.Equals("Ascend", StringComparison.OrdinalIgnoreCase) ||
+                    instrumentGroup.Equals("Astral", StringComparison.OrdinalIgnoreCase))
                 {
                     validInstrumentGroup = true;
                     requiredValues.Add(DatabaseManager.MetricColumns.XIC_Wide_Frac);
