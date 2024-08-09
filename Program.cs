@@ -17,9 +17,10 @@ namespace LLRCRunner
 
     internal class Program
     {
-        public const string PROGRAM_DATE = "August 8, 2024";
+        public const string PROGRAM_DATE = "August 9, 2024";
 
-        //protected const string GIGASAX_CONNECTION_STRING = "Data Source=gigasax;Initial Catalog=DMS5;Integrated Security=SSPI;";
+        // SQL Server: "Data Source=gigasax;Initial Catalog=DMS5;Integrated Security=SSPI;"
+
         protected const string CONNECTION_STRING = "Host=prismdb2.emsl.pnl.gov;Port=5432;Database=dms;UserId=svc-dms";
 
         protected static string mDatasetIDList;
