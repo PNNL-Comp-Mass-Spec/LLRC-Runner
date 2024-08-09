@@ -11,7 +11,7 @@ namespace LLRCRunner
     // Written by Josh Davis and Matthew Monroe for the Department of Energy (PNNL, Richland, WA)
     //
     // E-mail: matthew.monroe@pnl.gov or proteomics@pnnl.gov
-    // Website: https://github.com/PNNL-Comp-Mass-Spec/ or https://panomics.pnnl.gov/ or https://www.pnnl.gov/integrative-omics
+    // Website: https://github.com/PNNL-Comp-Mass-Spec/ or https://www.pnnl.gov/integrative-omics
     // -------------------------------------------------------------------------------
     //
 
@@ -211,10 +211,10 @@ namespace LLRCRunner
                 Console.WriteLine();
 
                 Console.WriteLine("E-mail: matthew.monroe@pnl.gov or proteomics@pnnl.gov");
-                Console.WriteLine("Website: https://github.com/PNNL-Comp-Mass-Spec/ or https://panomics.pnnl.gov/ or https://www.pnnl.gov/integrative-omics");
+                Console.WriteLine("Website: https://github.com/PNNL-Comp-Mass-Spec/ or https://www.pnnl.gov/integrative-omics");
                 Console.WriteLine();
 
-                // Delay for 750 msec in case the user double clicked this file from within Windows Explorer (or started the program via a shortcut)
+                // Delay for 750 msec in case the user double-clicked this file from within Windows Explorer (or started the program via a shortcut)
                 AppUtils.SleepMilliseconds(750);
             }
             catch (Exception ex)

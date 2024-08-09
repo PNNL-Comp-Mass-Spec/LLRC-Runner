@@ -70,7 +70,7 @@ Use `/Skip` to skip datasets that already have a QCDM value defined
 
 Written by  Joshua Davis and Matthew Monroe for the Department of Energy (PNNL, Richland, WA) \
 E-mail: matthew.monroe@pnnl.gov or proteomics@pnnl.gov\
-Website: https://github.com/PNNL-Comp-Mass-Spec/ or https://panomics.pnnl.gov/ or https://www.pnnl.gov/integrative-omics
+Website: https://github.com/PNNL-Comp-Mass-Spec/ or https://www.pnnl.gov/integrative-omics
 
 ## License
 
