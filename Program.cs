@@ -6,15 +6,16 @@ using PRISM.Logging;
 
 namespace LLRCRunner
 {
-    // -------------------------------------------------------------------------------
-    // This program uses LLRC to compute QCDM values using QC metric values from Quameter and SMAQC (Software Metrics for Analysis of Quality Control)
-    // Written by Josh Davis and Matthew Monroe for the Department of Energy (PNNL, Richland, WA)
-    //
-    // E-mail: matthew.monroe@pnl.gov or proteomics@pnnl.gov
-    // Website: https://github.com/PNNL-Comp-Mass-Spec/ or https://www.pnnl.gov/integrative-omics
-    // -------------------------------------------------------------------------------
-    //
-
+    /// <summary>
+    /// <para>
+    /// This program uses LLRC to compute QCDM values using QC metric values from Quameter and SMAQC (Software Metrics for Analysis of Quality Control)
+    /// Written by Josh Davis and Matthew Monroe for the Department of Energy (PNNL, Richland, WA)
+    /// </para>
+    /// <para>
+    /// E-mail: matthew.monroe@pnl.gov or proteomics@pnnl.gov
+    /// Website: https://github.com/PNNL-Comp-Mass-Spec/ or https://www.pnnl.gov/integrative-omics
+    /// </para>
+    /// </summary>
     internal class Program
     {
         public const string PROGRAM_DATE = "August 9, 2024";
