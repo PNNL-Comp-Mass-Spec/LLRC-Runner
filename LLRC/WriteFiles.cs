@@ -9,9 +9,9 @@ namespace LLRC
 {
     internal class WriteFiles : EventNotifier
     {
-        public const string LLR_SCRIPT_NAME = "QCDMscript.r";
         // Ignore Spelling: Exactive, Exploris, LLRC, Lumos, Orbitrap, sep
 
+        private const string LLRC_SCRIPT_NAME = "QCDMscript.r";
 
         /// <summary>
         /// Keys in this dictionary are metric names, values are the column index in the .csv file created by this class
@@ -269,7 +269,7 @@ namespace LLRC
 
             // ReSharper restore StringLiteralTypo
 
-            File.WriteAllText(Path.Combine(workingDirPath, LLR_SCRIPT_NAME), contents);
+            File.WriteAllText(Path.Combine(workingDirPath, LLRC_SCRIPT_NAME), contents);
         }
 
         /// <summary>
@@ -278,7 +278,7 @@ namespace LLRC
         /// <param name="directoryPath"></param>
         public void WriteBatch(string directoryPath)
         {
-            var contents = '"' + RProgramPath + '"' + " CMD BATCH --vanilla --slave " + '"' + Path.Combine(directoryPath, LLR_SCRIPT_NAME) + '"';
+            var contents = '"' + RProgramPath + '"' + " CMD BATCH --vanilla --slave " + '"' + Path.Combine(directoryPath, LLRC_SCRIPT_NAME) + '"';
             File.WriteAllText(Path.Combine(directoryPath, "RunR.bat"), contents);
         }
 
