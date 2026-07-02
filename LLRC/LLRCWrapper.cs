@@ -301,10 +301,7 @@ namespace LLRC
                     mErrorMessage = "No Metrics were found for the given Datasets IDs";
                     OnErrorEvent(mErrorMessage);
 
-                    if (ProcessingTimespan)
-                        return true;
-
-                    return false;
+                    return ProcessingTimespan;
                 }
 
                 // Deletes Old files so they don't interfere with new ones
