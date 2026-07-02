@@ -9,6 +9,8 @@ namespace LLRC
 {
     internal class Posting : EventNotifier
     {
+        // Ignore Spelling: LLRC
+
         public const string STORED_PROCEDURE = "store_qcdm_results";
 
         private readonly string mConnectionString;

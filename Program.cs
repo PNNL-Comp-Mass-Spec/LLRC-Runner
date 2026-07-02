@@ -18,7 +18,9 @@ namespace LLRCRunner
     /// </summary>
     internal class Program
     {
-        public const string PROGRAM_DATE = "August 9, 2024";
+        // Ignore Spelling: dms, Quameter, Richland, svc-dms, timespan
+
+        public const string PROGRAM_DATE = "July 1, 2026";
 
         // SQL Server: "Data Source=gigasax;Initial Catalog=DMS5;Integrated Security=SSPI;"
 

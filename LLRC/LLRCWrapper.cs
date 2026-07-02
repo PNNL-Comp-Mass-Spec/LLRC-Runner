@@ -10,6 +10,8 @@ namespace LLRC
 {
     public class LLRCWrapper : PRISM.EventNotifier
     {
+        // Ignore Spelling: AllData, hh:mm, LLRC, RDATA, timespan, yyyy
+
         public const string NO_NEW_RECENT_DATASETS = "No new datasets found with new QC values from the last";
 
         public const string RDATA_FILE_MODELS = "Models_paper.Rdata";

@@ -10,6 +10,8 @@ namespace LLRC
     internal class WriteFiles : EventNotifier
     {
         public const string LLR_SCRIPT_NAME = "QCDMscript.r";
+        // Ignore Spelling: Exactive, Exploris, LLRC, Lumos, Orbitrap, sep
+
 
         /// <summary>
         /// Keys in this dictionary are metric names, values are the column index in the .csv file created by this class

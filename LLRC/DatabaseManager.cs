@@ -7,6 +7,8 @@ namespace LLRC
 {
     internal class DatabaseManager : PRISM.EventNotifier
     {
+        // Ignore Spelling: LLRC
+
         private readonly IDBTools mDbTools;
 
         private string mErrorMessage;
@@ -212,8 +214,12 @@ namespace LLRC
                     {
                         var metricName = Enum.GetName(typeof(MetricColumns), column);
 
+#pragma warning disable IDE0270 // Use coalesce expression
+
                         if (metricName == null)
                             throw new NullReferenceException("Encountered a null metric name while populating the column map dictionary");
+
+#pragma warning restore IDE0270 // Use coalesce expression
 
                         columnMap.Add(column, metricName.ToLower());
                     }
